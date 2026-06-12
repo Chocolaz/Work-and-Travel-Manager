@@ -711,6 +711,7 @@ tr:nth-child(even) {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
+  color: #FFE135;
 }
 
 .wh-weekly-row {

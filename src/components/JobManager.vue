@@ -347,18 +347,7 @@ const logForm = ref({
 });
 const loggingWork = ref(false);
 
-// Auto-select first job as default if selected job is empty or deleted
-watch(() => props.jobs, (newJobs) => {
-  if (newJobs && newJobs.length > 0) {
-    // If current selected job_type is not in the list anymore
-    const exists = newJobs.some(j => j.job_type === logForm.value.job_type);
-    if (!exists) {
-      logForm.value.job_type = newJobs[0].job_type;
-    }
-  } else {
-    logForm.value.job_type = '';
-  }
-}, { immediate: true });
+// No auto-select: user must choose a job each time they log
 
 const calcHoursFromForm = (start, end, breakMin) => {
   if (!start || !end) return 0;
@@ -398,7 +387,7 @@ const logWork = async () => {
   try {
     await emit('add-work-log', { ...logForm.value });
     logForm.value = { 
-      job_type: logForm.value.job_type, 
+      job_type: '',
       date: today, 
       start_time: '08:00', 
       end_time: '16:00', 
