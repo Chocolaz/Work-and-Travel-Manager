@@ -1,0 +1,26 @@
+{
+  "name": "wat-expense-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "vite",
+    "dev:backend": "node backend/server.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "gsap": "^3.15.0",
+    "jsonwebtoken": "^9.0.2",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "concurrently": "^8.2.2",
+    "vite": "^5.1.4"
+  }
+}
