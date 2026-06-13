@@ -179,16 +179,19 @@
             <li>กระแสเงินสดคงเหลือสุทธิ (Net Savings): <strong class="wh-green">{{ formatCurrency(weeklyNetSurplus) }}</strong> / สัปดาห์</li>
           </ul>
 
-          <div class="strategy-tips" style="margin-top: 12px; border-top: 1.5px dashed #000; padding-top: 10px;">
+          <div v-if="remainingNetDebt > 0" class="strategy-tips" style="margin-top: 12px; border-top: 1.5px dashed #000; padding-top: 10px;">
             <strong>📋 แผนควบคุมค่าใช้จ่ายที่แนะนำ:</strong>
             <p v-if="weeklyExpenseTargetConverted > 0 && simulatedWeeklyExpense > weeklyExpenseTargetConverted">
               ⚠️ ตอนนี้งบประมาณที่คุณสมมติ ({{ formatCurrency(simulatedWeeklyExpense) }}) สูงกว่าเป้าหมายที่ตั้งไว้ ({{ formatCurrency(weeklyExpenseTargetConverted) }}) 
               <span v-if="getDiffDays(weeklyExpenseTargetConverted).status === 'sim-deficit'">
                 หากคุณคุมงบให้กลับไปอยู่ในเป้าหมายได้ คุณจะ<strong>สามารถคืนทุนได้สำเร็จ!</strong> 🎉 (เนื่องจากรายจ่ายจำลองปัจจุบันสูงเกินไปจนไม่สามารถคืนทุนได้ ⚠️)
               </span>
-              <span v-else>
+              <span v-else-if="getDiffDays(weeklyExpenseTargetConverted).days > 0">
                 หากคุมให้กลับไปอยู่ในเป้าหมายได้ คุณจะคืนทุนเร็วขึ้นอีก 
                 <strong>{{ getDiffDays(weeklyExpenseTargetConverted).days }} วัน!</strong>
+              </span>
+              <span v-else>
+                หากคุมให้กลับไปอยู่ในเป้าหมายได้ คุณจะคืนทุนในกรอบเวลาเดียวกับเป้าหมายที่ตั้งไว้
               </span>
             </p>
             <p v-else-if="simulatedWeeklyExpense < actualWeeklyExpenseTotal">
@@ -196,8 +199,11 @@
               <span v-if="getDiffDays(actualWeeklyExpenseTotal).status === 'alt-deficit'">
                 คุณจะ<strong>สามารถคืนทุนได้สำเร็จ!</strong> 🎉 (ซึ่งหากใช้จ่ายเฉลี่ยเท่าเดิม คุณจะไม่สามารถคืนทุนได้เลย ⚠️)
               </span>
-              <span v-else>
+              <span v-else-if="getDiffDays(actualWeeklyExpenseTotal).days > 0">
                 คุณจะคืนทุนเร็วกว่าค่าเฉลี่ยปกติถึง <strong>{{ getDiffDays(actualWeeklyExpenseTotal).days }} วัน!</strong>
+              </span>
+              <span v-else>
+                คุณจะคืนทุนได้ในเวลาที่ใกล้เคียงกับค่าเฉลี่ยปกติ
               </span>
             </p>
             <p v-else>
@@ -227,6 +233,9 @@
                 ⚠️ ระยะเวลาโครงการได้สิ้นสุดลงแล้ว!
               </div>
             </div>
+          </div>
+          <div v-else class="strategy-tips" style="margin-top: 12px; border-top: 1.5px dashed #000; padding-top: 10px; color: #0b6623; font-weight: 800;">
+            🎉 ยินดีด้วย! คุณสามารถคืนทุนสำหรับโครงการนี้ได้สำเร็จแล้ว! ยอดเก็บออมหลังจากนี้ของคุณคือกำไรสะสมล้วนๆ ขอให้ใช้ชีวิตและท่องเที่ยวให้สนุกเต็มที่เลยน้า! 🗽🇺🇸
           </div>
         </div>
       </div>
@@ -342,10 +351,12 @@ watch(() => props.countdowns.weekly_expense_target, () => {
 // Watch active currency to convert simulated weekly expense budget
 watch(() => props.activeCurrency, (newCurrency, oldCurrency) => {
   const r = rate.value;
-  if (oldCurrency === 'USD' && newCurrency === 'THB') {
-    simulatedWeeklyExpense.value = parseFloat((simulatedWeeklyExpense.value * r).toFixed(2));
-  } else if (oldCurrency === 'THB' && newCurrency === 'USD') {
-    simulatedWeeklyExpense.value = parseFloat((simulatedWeeklyExpense.value / r).toFixed(2));
+  if (oldCurrency && oldCurrency !== newCurrency) {
+    if (newCurrency === 'THB') {
+      simulatedWeeklyExpense.value = parseFloat((simulatedWeeklyExpense.value * r).toFixed(2));
+    } else if (newCurrency === 'USD') {
+      simulatedWeeklyExpense.value = parseFloat((simulatedWeeklyExpense.value / r).toFixed(2));
+    }
   }
 });
 
@@ -803,7 +814,8 @@ const netOverDays = computed(() => {
 
 .sim-helper-row {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--color-muted);

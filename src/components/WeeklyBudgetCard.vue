@@ -171,10 +171,12 @@ watch(() => props.countdowns, () => {
 watch(() => props.activeCurrency, (newCurrency, oldCurrency) => {
   if (!isEditing.value) return;
   const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
-  if (oldCurrency === 'USD' && newCurrency === 'THB') {
-    editWeeklyExpenseTarget.value = parseFloat((editWeeklyExpenseTarget.value * rate).toFixed(2));
-  } else if (oldCurrency === 'THB' && newCurrency === 'USD') {
-    editWeeklyExpenseTarget.value = parseFloat((editWeeklyExpenseTarget.value / rate).toFixed(2));
+  if (oldCurrency && oldCurrency !== newCurrency) {
+    if (newCurrency === 'THB') {
+      editWeeklyExpenseTarget.value = parseFloat((editWeeklyExpenseTarget.value * rate).toFixed(2));
+    } else if (newCurrency === 'USD') {
+      editWeeklyExpenseTarget.value = parseFloat((editWeeklyExpenseTarget.value / rate).toFixed(2));
+    }
   }
 });
 

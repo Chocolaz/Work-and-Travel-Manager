@@ -668,4 +668,40 @@ const deleteLog = async (id) => {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@media (max-width: 768px) {
+  .jm-job-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    border: 2px solid #000;
+    border-radius: 8px;
+    padding: 12px;
+    background: #FAFAFA;
+    box-shadow: 2px 2px 0px #000;
+    margin-bottom: 8px;
+  }
+
+  .jm-job-type-badge {
+    grid-column: span 2;
+  }
+
+  .jm-title-input {
+    grid-column: span 2;
+    width: 100% !important;
+  }
+
+  .jm-rate-wrap, 
+  .jm-hours-wrap, 
+  .jm-tax-wrap {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .jm-remove-job-btn {
+    grid-column: span 1;
+    width: 100%;
+    height: 100%;
+    padding: 8px !important;
+  }
+}
 </style>

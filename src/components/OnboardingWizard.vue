@@ -10,7 +10,7 @@
       </div>
 
       <!-- Step Indicators -->
-      <div class="neo-tabs" style="justify-content: center; margin-bottom: 24px;">
+      <div class="neo-tabs onboarding-steps-tabs" style="justify-content: center; margin-bottom: 24px;">
         <div 
           v-for="s in 5" 
           :key="s" 
@@ -18,6 +18,20 @@
           style="cursor: default; pointer-events: none; border-width: 2px; padding: 6px 12px; font-size: 0.75rem;"
         >
           STEP {{ s }}
+        </div>
+      </div>
+
+      <!-- Step Indicator Mobile Compact -->
+      <div class="onboarding-step-mobile-indicator" style="margin-bottom: 20px; text-align: center;">
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: 0.85rem; margin-bottom: 8px; text-transform: uppercase;">
+          ขั้นตอนที่ {{ step }} / 5
+        </div>
+        <div class="neo-progress-container" style="height: 12px; margin: 0; background-color: #FFFFFF;">
+          <div 
+            class="neo-progress-bar" 
+            :style="{ width: `${(step / 5) * 100}%` }"
+            style="height: 100%; background-color: var(--color-accent);"
+          ></div>
         </div>
       </div>
 
@@ -94,7 +108,7 @@
           <input type="text" v-model="mainJobTitle" placeholder="เช่น Server, Lifeguard" required style="padding: 8px 12px; border-width: 2px;" />
           <small v-if="errors.mainJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.mainJobTitle }}</small>
         </div>
-        <div class="form-row" style="margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div class="form-row job-form-row" style="margin-bottom: 16px;">
           <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
             <input type="number" v-model.number="mainJobRate" min="0" step="0.01" required style="padding: 6px 10px; border-width: 2px;" />
@@ -124,7 +138,7 @@
             <input type="text" v-model="secondJobTitle" placeholder="เช่น Kitchen Help, Cashier" style="padding: 8px 12px; border-width: 2px;" />
             <small v-if="errors.secondJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.secondJobTitle }}</small>
           </div>
-          <div class="form-row" style="margin-bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <div class="form-row job-form-row" style="margin-bottom: 0;">
             <div class="form-group" style="margin-bottom: 0;">
               <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
               <input type="number" v-model.number="secondJobRate" min="0" step="0.01" style="padding: 6px 10px; border-width: 2px;" />
@@ -155,7 +169,7 @@
             <input type="text" v-model="thirdJobTitle" placeholder="เช่น Housekeeper, Fast Food" style="padding: 8px 12px; border-width: 2px;" />
             <small v-if="errors.thirdJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.thirdJobTitle }}</small>
           </div>
-          <div class="form-row" style="margin-bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <div class="form-row job-form-row" style="margin-bottom: 0;">
             <div class="form-group" style="margin-bottom: 0;">
               <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
               <input type="number" v-model.number="thirdJobRate" min="0" step="0.01" style="padding: 6px 10px; border-width: 2px;" />

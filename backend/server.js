@@ -355,7 +355,7 @@ app.get('/api/data', authenticateToken, (req, res) => {
     // Fetch jobs - seed defaults if none exist
     let jobs = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
     if (!jobs || jobs.length === 0) {
-      const insertDefaultJob = db.prepare('INSERT OR IGNORE INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week) VALUES (?, ?, ?, ?, ?, ?, 0.0)');
+      const insertDefaultJob = db.prepare('INSERT OR IGNORE INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week) VALUES (?, ?, ?, ?, ?, ?, ?)');
       const jobDefaults = [
         { type: 'main', title: 'งานหลัก (Main Job)', rate: 15.0, tax: 0.0 },
       ];
