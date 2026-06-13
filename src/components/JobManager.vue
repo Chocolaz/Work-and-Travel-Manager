@@ -149,17 +149,33 @@
 
       <!-- Preview -->
       <div v-if="logPreview.hours !== null" class="jm-preview-bar" :class="logPreview.hours > 0 ? 'preview-ok' : 'preview-warn'">
-        <span v-if="logPreview.hours > 0">
-          ⏱ <strong>{{ logPreview.hours.toFixed(2) }} ชั่วโมง</strong>
-          <template v-if="logPreview.taxPct > 0">
-            — gross <strong>${{ logPreview.grossEarnings.toFixed(2) }}</strong>
-            หักภาษี {{ logPreview.taxPct }}% → net <strong>${{ logPreview.earnings.toFixed(2) }}</strong>
-          </template>
-          <template v-else>
-            ≈ <strong>${{ logPreview.earnings.toFixed(2) }}</strong>
-          </template>
-          ({{ logPreview.jobTitle }}, ${{ logPreview.rate }}/hr)
-        </span>
+        <div v-if="logPreview.hours > 0" class="preview-layout">
+          <div class="preview-primary">
+            <span>⏱ <strong>{{ logPreview.hours.toFixed(2) }} ชั่วโมง</strong></span>
+            <span class="preview-job-info">({{ logPreview.jobTitle }}, ${{ logPreview.rate }}/hr)</span>
+          </div>
+          
+          <div v-if="logPreview.taxPct > 0" class="preview-breakdown">
+            <div class="preview-row">
+              <span>รายได้รวม (Gross):</span>
+              <strong>${{ logPreview.grossEarnings.toFixed(2) }}</strong>
+            </div>
+            <div class="preview-row">
+              <span>หักภาษี (Tax {{ logPreview.taxPct }}%):</span>
+              <span class="wh-red">-${{ (logPreview.grossEarnings - logPreview.earnings).toFixed(2) }}</span>
+            </div>
+            <div class="preview-row net-row">
+              <span>รายได้สุทธิ (Net):</span>
+              <span class="wh-green">${{ logPreview.earnings.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div v-else class="preview-breakdown">
+            <div class="preview-row net-row">
+              <span>รายได้สุทธิ (Net):</span>
+              <span class="wh-green">${{ logPreview.earnings.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
         <span v-else>⚠️ เวลาเลิกงานต้องมากกว่าเวลาเข้างานหลังหักพัก</span>
       </div>
 
@@ -182,6 +198,7 @@
         ยังไม่มีบันทึก เริ่มบันทึกชั่วโมงงานด้านบนได้เลย! 💪
       </div>
 
+      <!-- Desktop Mode (Table View) -->
       <div v-else class="jm-table-wrap">
         <table class="jm-table">
           <thead>
@@ -213,6 +230,34 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Mobile Mode (Card List View) -->
+      <div class="mobile-work-cards" v-if="props.workLogs.length > 0">
+        <div v-for="log in props.workLogs" :key="log.id" class="mobile-work-card">
+          <!-- Card Header -->
+          <div class="mobile-work-card-header">
+            <span class="mobile-work-card-date">📅 {{ formatDate(log.date) }}</span>
+            <button class="neo-btn danger-btn mobile-work-del-btn" @click="deleteLog(log.id)" title="ลบ">✖ ลบรายการ</button>
+          </div>
+          
+          <!-- Card Body -->
+          <div class="mobile-work-card-body">
+            <div class="mobile-work-card-details">
+              <div style="margin-bottom: 6px;">
+                <span class="jm-job-badge-sm" :class="getBadgeClass(getJobIndex(log.job_type))">
+                  {{ getJobTitle(log.job_type) }}
+                </span>
+              </div>
+              <div class="mobile-work-card-time">🕒 {{ log.start_time }} – {{ log.end_time }} (พัก {{ log.break_minutes }} นาที)</div>
+            </div>
+            
+            <div class="mobile-work-card-stats">
+              <div class="mobile-work-card-hours">{{ calcHours(log).toFixed(2) }} hr</div>
+              <div class="mobile-work-card-earnings">${{ calcEarnings(log).toFixed(2) }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -581,6 +626,65 @@ const deleteLog = async (id) => {
 .preview-ok   { background: #B9F7CA; }
 .preview-warn { background: #FFE135; }
 
+.preview-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-primary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
+.preview-job-info {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  font-weight: 800;
+  background-color: rgba(255, 255, 255, 0.6);
+  padding: 2px 6px;
+  border: 1.5px solid #000;
+  border-radius: 4px;
+}
+
+.preview-breakdown {
+  border-top: 1.5px dashed #000;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.net-row {
+  font-size: 0.82rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.wh-red {
+  color: #c20000;
+  font-weight: 900;
+}
+
+.wh-green {
+  color: #0a7c2e;
+  font-weight: 900;
+}
+
 .jm-save-btn {
   padding: 10px 22px;
   font-size: 0.9rem;
@@ -614,6 +718,8 @@ const deleteLog = async (id) => {
 }
 
 .jm-table th {
+  background-color: #000;
+  color: #FFE135;
   padding: 10px 12px;
   text-align: left;
   font-weight: 900;
@@ -702,6 +808,109 @@ const deleteLog = async (id) => {
     width: 100%;
     height: 100%;
     padding: 8px !important;
+  }
+}
+
+/* Mobile styles for Logger, Work logs, and Buttons */
+.mobile-work-cards {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  .jm-table-wrap {
+    display: none;
+  }
+  
+  .mobile-work-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .mobile-work-card {
+    border: 2px solid #000;
+    border-radius: 8px;
+    background-color: #ffffff;
+    padding: 12px;
+    box-shadow: 3px 3px 0px #000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .mobile-work-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.5px dashed #000;
+    padding-bottom: 6px;
+  }
+  
+  .mobile-work-card-date {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--color-muted);
+  }
+  
+  .mobile-work-del-btn {
+    padding: 4px 8px !important;
+    font-size: 0.68rem !important;
+    border-width: 1.5px !important;
+    box-shadow: 1.5px 1.5px 0px #000 !important;
+  }
+  
+  .mobile-work-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  
+  .mobile-work-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .mobile-work-card-time {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+  
+  .mobile-work-card-stats {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  
+  .mobile-work-card-hours {
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: #000;
+  }
+  
+  .mobile-work-card-earnings {
+    font-size: 0.95rem;
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: #0a7c2e;
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .jm-save-btn, .jm-add-btn {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .jm-log-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
 </style>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:frontend": "vite",
+    "dev:frontend": "vite --host",
     "dev:backend": "node backend/server.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "vite build",

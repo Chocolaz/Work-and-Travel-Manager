@@ -54,75 +54,136 @@
 
     <!-- Table -->
     <div class="table-wrapper" style="max-height: 420px; overflow-y: auto;">
-      <table v-if="filteredTransactions.length > 0" style="table-layout: fixed; width: 100%;">
-        <colgroup>
-          <col style="width: 100px;" />
-          <col style="width: 90px;" />
-          <col style="width: 130px;" />
-          <col style="width: 150px;" />
-          <col style="width: 110px;" />
-          <col style="width: 60px;" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>วันที่</th>
-            <th>ประเภท</th>
-            <th>หมวดหมู่</th>
-            <th>บันทึก</th>
-            <th>จำนวนเงิน</th>
-            <th style="text-align: center;">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="tx in visibleTransactions" :key="tx.id" :class="{ 'new-highlight': tx.id === newlyAddedTxId }">
-            <td style="font-weight: 700;">{{ tx.date }}</td>
-            <td>
-              <span :class="['badge-tag', tx.type === 'income' ? 'income' : 'expense']" style="border-width: 1.5px; font-size: 0.65rem; padding: 2px 4px;">
-                {{ tx.type === 'income' ? 'INCOME' : 'EXPENSE' }}
-              </span>
-            </td>
-            <td style="font-weight: 700; text-transform: uppercase;">
-              {{ getCategoryLabel(tx.category) }}
-            </td>
-            <td 
-              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-              :title="tx.note"
-            >
-              {{ tx.note || '-' }}
-            </td>
-            <td style="font-family: var(--font-display); font-weight: 900;">
-              <!-- Active Converted Currency Display -->
-              <span :class="tx.type === 'income' ? 'text-success' : 'text-danger'">
+      <!-- Desktop Mode (Table View) -->
+      <div class="desktop-tx-table" v-if="filteredTransactions.length > 0">
+        <table style="table-layout: fixed; width: 100%;">
+          <colgroup>
+            <col style="width: 100px;" />
+            <col style="width: 90px;" />
+            <col style="width: 130px;" />
+            <col style="width: 150px;" />
+            <col style="width: 110px;" />
+            <col style="width: 60px;" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ประเภท</th>
+              <th>หมวดหมู่</th>
+              <th>บันทึก</th>
+              <th>จำนวนเงิน</th>
+              <th style="text-align: center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="tx in visibleTransactions" :key="tx.id" :class="{ 'new-highlight': tx.id === newlyAddedTxId }">
+              <td style="font-weight: 700;">{{ tx.date }}</td>
+              <td>
+                <span :class="['badge-tag', tx.type === 'income' ? 'income' : 'expense']" style="border-width: 1.5px; font-size: 0.65rem; padding: 2px 4px;">
+                  {{ tx.type === 'income' ? 'INCOME' : 'EXPENSE' }}
+                </span>
+              </td>
+              <td style="font-weight: 700; text-transform: uppercase;">
+                {{ getCategoryLabel(tx.category) }}
+              </td>
+              <td 
+                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                :title="tx.note"
+              >
+                {{ tx.note || '-' }}
+              </td>
+              <td style="font-family: var(--font-display); font-weight: 900;">
+                <!-- Active Converted Currency Display -->
+                <span :class="tx.type === 'income' ? 'text-success' : 'text-danger'">
+                  {{ formatValue(tx.amount, tx.currency) }}
+                </span>
+                
+                <!-- Original currency in parenthesis if mismatched -->
+                <span 
+                  v-if="tx.currency !== activeCurrency" 
+                  style="font-size: 0.7rem; color: var(--color-muted); font-weight: 500; margin-top: 2px; display: block;"
+                >
+                  (Orig: {{ tx.currency === 'USD' ? '$' : '' }}{{ tx.currency === 'THB' ? Math.round(tx.amount) : tx.amount.toFixed(2) }}{{ tx.currency === 'THB' ? ' ฿' : '' }})
+                </span>
+              </td>
+              <td style="min-width: 60px; text-align: center;">
+                <button 
+                  type="button" 
+                  class="neo-btn danger-btn" 
+                  style="padding: 4px 8px; font-size: 0.7rem; box-shadow: 2px 2px 0px #000; border-width: 2px;"
+                  @click="emit('delete-transaction', tx.id)"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+            <!-- Load More Row (Spans all columns) -->
+            <tr v-if="filteredTransactions.length > visibleCount" class="load-more-row" @click="loadMore">
+              <td colspan="6" style="text-align: center;">
+                ➕ โหลดรายการเพิ่มเติม...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Mode (Card View) -->
+      <div class="mobile-tx-cards" v-if="filteredTransactions.length > 0">
+        <div 
+          v-for="tx in visibleTransactions" 
+          :key="tx.id" 
+          class="mobile-tx-card" 
+          :class="{ 'new-highlight-card': tx.id === newlyAddedTxId }"
+        >
+          <!-- Card Header -->
+          <div class="mobile-card-header">
+            <span class="mobile-card-date">📅 {{ tx.date }}</span>
+            <span :class="['badge-tag', tx.type === 'income' ? 'income' : 'expense']" style="border-width: 1.5px; font-size: 0.6rem; padding: 2px 4px;">
+              {{ tx.type === 'income' ? 'INCOME' : 'EXPENSE' }}
+            </span>
+          </div>
+
+          <!-- Card Body -->
+          <div class="mobile-card-body">
+            <div class="mobile-card-details">
+              <div class="mobile-card-category">{{ getCategoryLabel(tx.category) }}</div>
+              <div class="mobile-card-note">{{ tx.note || '-' }}</div>
+            </div>
+            
+            <div class="mobile-card-value">
+              <span :class="tx.type === 'income' ? 'text-success' : 'text-danger'" style="font-family: var(--font-display); font-weight: 900; font-size: 0.95rem;">
                 {{ formatValue(tx.amount, tx.currency) }}
               </span>
-              
-              <!-- Original currency in parenthesis if mismatched -->
-              <span 
-                v-if="tx.currency !== activeCurrency" 
-                style="font-size: 0.7rem; color: var(--color-muted); font-weight: 500; margin-top: 2px; display: block;"
-              >
+              <span v-if="tx.currency !== activeCurrency" style="font-size: 0.65rem; color: var(--color-muted); font-weight: 500; margin-top: 2px; display: block;">
                 (Orig: {{ tx.currency === 'USD' ? '$' : '' }}{{ tx.currency === 'THB' ? Math.round(tx.amount) : tx.amount.toFixed(2) }}{{ tx.currency === 'THB' ? ' ฿' : '' }})
               </span>
-            </td>
-            <td style="min-width: 60px; text-align: center;">
-              <button 
-                type="button" 
-                class="neo-btn danger-btn" 
-                style="padding: 4px 8px; font-size: 0.7rem; box-shadow: 2px 2px 0px #000; border-width: 2px;"
-                @click="emit('delete-transaction', tx.id)"
-              >
-                🗑️
-              </button>
-            </td>
-          </tr>
-          <!-- Load More Row (Spans all columns) -->
-          <tr v-if="filteredTransactions.length > visibleCount" class="load-more-row" @click="loadMore">
-            <td colspan="6" style="text-align: center;">
-              ➕ โหลดรายการเพิ่มเติม...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+
+          <!-- Card Footer (Delete Button) -->
+          <div class="mobile-card-footer">
+            <button 
+              type="button" 
+              class="neo-btn danger-btn" 
+              style="width: 100%; padding: 6px; font-size: 0.75rem; box-shadow: 2px 2px 0px #000; border-width: 2px;"
+              @click="emit('delete-transaction', tx.id)"
+            >
+              🗑️ ลบรายการนี้
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Load More -->
+        <button 
+          v-if="filteredTransactions.length > visibleCount" 
+          type="button"
+          class="neo-btn" 
+          style="width: 100%; padding: 10px; font-size: 0.8rem; box-shadow: 3px 3px 0px #000; border-width: 2.5px; background-color: var(--color-accent); font-weight: 800; margin-top: 4px;"
+          @click="loadMore"
+        >
+          ➕ โหลดรายการเพิ่มเติม
+        </button>
+      </div>
       
       <!-- Empty State -->
       <div v-else class="text-center" style="padding: 32px; font-weight: 800; color: var(--color-muted);">
@@ -373,6 +434,103 @@ tr:hover {
   }
   100% {
     background-color: transparent;
+  }
+}
+
+/* Mobile Responsive Transaction List Styles */
+.mobile-tx-cards {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .desktop-tx-table {
+    display: none;
+  }
+  
+  .mobile-tx-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 2px;
+  }
+
+  .mobile-tx-card {
+    border: 2px solid #000;
+    border-radius: 8px;
+    background-color: #ffffff;
+    padding: 12px;
+    box-shadow: 3px 3px 0px #000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.5px dashed #000;
+    padding-bottom: 6px;
+  }
+
+  .mobile-card-date {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+
+  .mobile-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mobile-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 65%;
+  }
+
+  .mobile-card-category {
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: #000;
+  }
+
+  .mobile-card-note {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-muted);
+    word-break: break-word;
+  }
+
+  .mobile-card-value {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .mobile-card-footer {
+    margin-top: 4px;
+  }
+  
+  .new-highlight-card {
+    animation: highlightFadeCard 3s ease-out forwards;
+  }
+}
+
+@keyframes highlightFadeCard {
+  0% {
+    background-color: var(--color-accent) !important;
+  }
+  60% {
+    background-color: var(--color-accent) !important;
+  }
+  100% {
+    background-color: #ffffff;
   }
 }
 </style>

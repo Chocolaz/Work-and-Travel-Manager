@@ -29,6 +29,10 @@
   padding: 0;
 }
 
+html, body, button, input, select, textarea, a, .neo-tab-btn {
+  touch-action: manipulation;
+}
+
 body {
   background-color: var(--bg-base);
   color: var(--color-text);
@@ -36,7 +40,8 @@ body {
   padding: 16px;
   line-height: 1.4;
   overflow-x: hidden;
-  word-break: keep-all;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .container {
@@ -706,6 +711,8 @@ tr:nth-child(even) {
 }
 
 .wh-weekly-table th {
+  background-color: #000;
+  color: #FFE135;
   padding: 10px 14px;
   text-align: left;
   font-weight: 900;
@@ -713,7 +720,6 @@ tr:nth-child(even) {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
-  color: #FFE135;
 }
 
 .wh-weekly-row {
@@ -836,25 +842,49 @@ tr:nth-child(even) {
   }
 
   .neo-tabs {
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    gap: 8px !important;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .neo-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .neo-tab-btn {
-    width: 100%;
-    text-align: center;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .stats-grid .neo-card {
+    padding: 10px !important;
+    border-width: 2.5px !important;
+  }
+
+  .stats-grid .stat-num {
+    font-size: 1.2rem !important;
+  }
+
+  .stats-grid .stat-sub {
+    font-size: 0.62rem !important;
+    line-height: 1.2 !important;
   }
 }
 
 @media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-num {
-    font-size: 1.5rem;
-  }
-
   .table-wrapper th, 
   .table-wrapper td {
     padding: 8px 10px;

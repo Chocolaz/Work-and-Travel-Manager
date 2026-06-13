@@ -171,13 +171,25 @@
 
         <!-- Status: Healthy cash flow -->
         <div v-else class="advice-box info">
-          <strong>📈 รายรับ-รายจ่าย รายสัปดาห์:</strong>
-          <ul>
-            <li>รายรับสุทธิคาดการณ์: <strong class="wh-green">{{ formatCurrency(weeklyNetIncome) }}</strong> / สัปดาห์</li>
-            <li>งบค่าใช้จ่ายควบคุมไว้ (ไม่รวมค่าเช่า): <strong class="wh-red">{{ formatCurrency(simulatedWeeklyExpense) }}</strong> / สัปดาห์</li>
-            <li>ค่าเช่าบ้านคงที่: <strong class="wh-red">{{ formatCurrency(rentAmountActive) }}</strong> / สัปดาห์</li>
-            <li>กระแสเงินสดคงเหลือสุทธิ (Net Savings): <strong class="wh-green">{{ formatCurrency(weeklyNetSurplus) }}</strong> / สัปดาห์</li>
-          </ul>
+          <strong class="advice-box-title">📈 สรุปกระแสเงินสดรายสัปดาห์ (Weekly Cash Flow)</strong>
+          <div class="cashflow-summary-list">
+            <div class="cashflow-row">
+              <span class="cf-label">รายรับสุทธิคาดการณ์:</span>
+              <span class="cf-value wh-green">{{ formatCurrency(weeklyNetIncome) }}</span>
+            </div>
+            <div class="cashflow-row">
+              <span class="cf-label">งบจำลอง (ไม่รวมค่าเช่า):</span>
+              <span class="cf-value wh-red">{{ formatCurrency(simulatedWeeklyExpense) }}</span>
+            </div>
+            <div class="cashflow-row">
+              <span class="cf-label">ค่าเช่าบ้านคงที่:</span>
+              <span class="cf-value wh-red">{{ formatCurrency(rentAmountActive) }}</span>
+            </div>
+            <div class="cashflow-row net-savings-row">
+              <span class="cf-label">กระแสเงินสดสุทธิ (Net Savings):</span>
+              <span class="cf-value wh-green">{{ formatCurrency(weeklyNetSurplus) }}</span>
+            </div>
+          </div>
 
           <div v-if="remainingNetDebt > 0" class="strategy-tips" style="margin-top: 12px; border-top: 1.5px dashed #000; padding-top: 10px;">
             <strong>📋 แผนควบคุมค่าใช้จ่ายที่แนะนำ:</strong>
@@ -889,6 +901,8 @@ const netOverDays = computed(() => {
   line-height: 1.6;
   font-weight: 700;
   box-shadow: 3px 3px 0px #000;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 .advice-box.danger {
@@ -901,13 +915,77 @@ const netOverDays = computed(() => {
   color: black;
 }
 
-.advice-box ul {
-  margin: 8px 0 0 16px;
-  padding: 0;
+.advice-box-title {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
 }
 
-.advice-box li {
-  margin-bottom: 4px;
+.cashflow-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  background: #ffffff;
+  border: 2px solid #000;
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 2px 2px 0px #000;
+}
+
+.cashflow-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.cashflow-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.net-savings-row {
+  font-weight: 900;
+  font-size: 0.82rem;
+  border-top: 1.5px solid #000;
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.cf-label {
+  color: var(--color-muted);
+}
+
+.cf-value {
+  font-weight: 900;
+}
+
+@media (max-width: 600px) {
+  .advice-section {
+    padding: 12px 14px !important;
+  }
+  
+  .advice-box {
+    padding: 10px !important;
+    font-size: 0.78rem !important;
+  }
+  
+  .cashflow-summary-list {
+    padding: 6px 10px !important;
+    margin-top: 8px !important;
+  }
+  
+  .cashflow-row {
+    font-size: 0.72rem !important;
+  }
+  
+  .net-savings-row {
+    font-size: 0.76rem !important;
+  }
 }
 
 .wh-green {
