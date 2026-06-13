@@ -97,9 +97,20 @@
 
     <!-- ===== LOG WORK HOURS SECTION ===== -->
     <section class="neo-card jm-section">
-      <h2 class="heading-font jm-section-title">
-        🕐 บันทึกชั่วโมงงาน (Log Hours)
-      </h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+        <h2 class="heading-font jm-section-title" style="margin-bottom: 0;">
+          🕐 บันทึกชั่วโมงงาน (Log Hours)
+        </h2>
+        <button
+          v-if="props.workLogs && props.workLogs.length > 0"
+          type="button"
+          class="neo-btn secondary-btn"
+          style="padding: 6px 12px; font-size: 0.75rem; box-shadow: 2px 2px 0px #000; border-width: 2px;"
+          @click="cloneLatestLog"
+        >
+          ดึงข้อมูลจากบันทึกก่อนหน้า 🔄
+        </button>
+      </div>
 
       <div class="jm-log-grid">
         <!-- Job Selection -->
@@ -449,8 +460,50 @@ const canLog = computed(() => {
   return job_type && date && start_time && end_time && logPreview.value.hours > 0;
 });
 
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const cloneLatestLog = () => {
+  if (!props.workLogs || props.workLogs.length === 0) return;
+  const sorted = [...props.workLogs].sort((a, b) => {
+    const dateDiff = new Date(b.date) - new Date(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    return (b.id || 0) - (a.id || 0);
+  });
+  const latest = sorted[0];
+  if (latest) {
+    logForm.value.job_type = latest.job_type;
+    logForm.value.date = latest.date;
+    logForm.value.start_time = latest.start_time;
+    logForm.value.end_time = latest.end_time;
+    logForm.value.break_minutes = latest.break_minutes;
+  }
+};
+
 const logWork = async () => {
   if (!canLog.value) return;
+
+  // Overlap check
+  const dateLogs = props.workLogs.filter(log => log.date === logForm.value.date);
+  const newStart = timeToMinutes(logForm.value.start_time);
+  const newEnd = timeToMinutes(logForm.value.end_time);
+  const hasOverlap = dateLogs.some(log => {
+    const extStart = timeToMinutes(log.start_time);
+    const extEnd = timeToMinutes(log.end_time);
+    return newStart < extEnd && extStart < newEnd;
+  });
+
+  if (hasOverlap) {
+    const ok = await showConfirm(
+      'ตรวจพบช่วงเวลาทำงานทับซ้อนกับประวัติงานที่เคยบันทึกไว้ในวันเดียวกัน คุณแน่ใจหรือไม่ว่าต้องการบันทึกเวลานี้เพิ่ม?',
+      'ตรวจพบเวลาทำงานซ้ำซ้อน ⚠️'
+    );
+    if (!ok) return;
+  }
+
   loggingWork.value = true;
   try {
     await emit('add-work-log', { ...logForm.value });

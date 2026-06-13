@@ -38,12 +38,29 @@
     </div>
 
       <!-- ROI / Break-even Card -->
-      <div :class="['neo-card', isBreakEven ? 'income-card' : 'expense-card']" style="color: black;">
+      <div :class="['neo-card', isBreakEven ? 'income-card' : 'expense-card']" style="color: black; overflow: visible !important;">
         <div class="neo-card-title">
           <span class="sticker" style="font-size: 1.1rem; width: 28px; height: 28px; background-color: white; color: black;">
             {{ isBreakEven ? '🏆' : '⏳' }}
           </span>
-          <span :style="{ color: isBreakEven ? 'black' : 'white' }">คืนทุนโครงการ (ROI)</span>
+          <span :style="{ color: isBreakEven ? 'black' : 'white' }" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span>คืนทุนโครงการ (ROI)</span>
+            <span 
+              class="roi-info-btn"
+              @click.stop="toggleTooltip"
+              style="cursor: pointer; font-size: 0.85rem; opacity: 0.85; position: relative; z-index: 10;"
+              :style="{ color: isBreakEven ? 'black' : '#FFF' }"
+            >
+              ℹ️
+              <!-- Popover Tooltip -->
+              <span v-if="showTooltip" class="roi-tooltip-content">
+                <strong>อัตราผลตอบแทนจากการลงทุน (ROI)</strong><br/>
+                คำนวณจาก: (รายได้สุทธิสะสม / ค่าใช้จ่ายโครงการสะสม) × 100%<br/><br/>
+                • 100% หมายถึงทำเงินคืนเท่าทุนค่าโครงการแล้ว<br/>
+                • หลังจากนี้ เงินที่หาได้คือกำไรล้วนๆ!
+              </span>
+            </span>
+          </span>
         </div>
         <div class="stat-num" :style="{ color: isBreakEven ? 'black' : 'white' }">{{ roi.toFixed(1) }}%</div>
         
@@ -67,7 +84,7 @@
   </template>
   
   <script setup>
-  import { computed } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   
   const props = defineProps({
     totalIncome: {
@@ -127,4 +144,61 @@
       return `${sign}${formatted} ฿`;
     }
   };
+
+  const showTooltip = ref(false);
+  const toggleTooltip = () => {
+    showTooltip.value = !showTooltip.value;
+  };
+
+  const closeTooltip = (e) => {
+    if (!e.target.closest('.roi-info-btn')) {
+      showTooltip.value = false;
+    }
+  };
+
+  onMounted(() => {
+    window.addEventListener('click', closeTooltip);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('click', closeTooltip);
+  });
   </script>
+
+<style scoped>
+.roi-info-btn {
+  display: inline-block;
+  user-select: none;
+}
+.roi-tooltip-content {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background-color: #000000;
+  color: #FFE135;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  width: 250px;
+  border-radius: 4px;
+  z-index: 100;
+  text-align: left;
+  line-height: 1.4;
+  white-space: normal;
+  pointer-events: auto;
+}
+.roi-tooltip-content::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #000000 transparent;
+}
+</style>

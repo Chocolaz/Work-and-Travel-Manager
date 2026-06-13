@@ -66,7 +66,16 @@
             อีก <strong class="highlight-text">{{ netWeeksNeeded.toFixed(1) }} สัปดาห์</strong> · 
             ประมาณ <strong class="highlight-text">{{ netPaychecksNeeded }} Paychecks</strong>
           </div>
-          <div class="debt-status">
+          
+          <!-- Comparison with Actual -->
+          <div v-if="isSimulatorActive && actualNetBreakEvenDate" class="sim-compare-box" style="margin-top: 8px; font-size: 0.72rem; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; font-weight: 700; color: #444;">
+            <span>วันคืนทุนจริง: {{ formatDateShort(actualNetBreakEvenDate) }}</span>
+            <span style="margin-left: 6px; font-weight: 800;" :style="{ color: simulatedDaysSaved > 0 ? '#0a7c2e' : (simulatedDaysSaved < 0 ? '#b30000' : '#000') }">
+              (ปรับแล้ว{{ simulatedDaysSaved > 0 ? 'เร็วขึ้น' : (simulatedDaysSaved < 0 ? 'ช้าลง' : 'ไม่เปลี่ยนแปลง') }} {{ Math.abs(simulatedDaysSaved) }} วัน)
+            </span>
+          </div>
+
+          <div class="debt-status" style="margin-top: 6px;">
             ยังขาดอีก <span class="debt-amount">{{ formatCurrency(remainingNetDebt) }}</span> จะคืนทุนสุทธิ
           </div>
         </div>
@@ -99,7 +108,17 @@
 
     <!-- What-If Simulator Section -->
     <div class="neo-card simulator-section">
-      <h3 class="heading-font section-title">🎛️ เครื่องจำลองสถานการณ์การเงิน (What-If Simulator)</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+        <h3 class="heading-font section-title" style="margin-bottom: 0;">🎛️ เครื่องจำลองสถานการณ์การเงิน (What-If Simulator)</h3>
+        <button
+          type="button"
+          class="neo-btn secondary-btn"
+          style="padding: 6px 12px; font-size: 0.75rem; box-shadow: 2px 2px 0px #000; border-width: 2px;"
+          @click="resetSimulator"
+        >
+          ล้างค่าจำลอง 🔄
+        </button>
+      </div>
       <p class="section-hint">ทดลองปรับค่าใช้จ่ายหรือชั่วโมงงานเพื่อเลื่อนวันคืนทุนให้เร็วขึ้นแบบเรียลไทม์</p>
 
       <div class="simulator-grid">
@@ -392,6 +411,11 @@ const resetHoursToDefaults = () => {
   syncSimulatedJobs();
 };
 
+const resetSimulator = () => {
+  resetBudgetToActual();
+  resetHoursToDefaults();
+};
+
 // Core calculations
 const remainingGrossDebt = computed(() => {
   return Math.max(0, props.projectCostsTotal - props.totalIncome);
@@ -465,6 +489,60 @@ const grossBreakEvenDate = computed(() => {
   d.setDate(d.getDate() + Math.ceil(grossWeeksNeeded.value * 7));
   return d;
 });
+
+// Actual predictions (non-simulated)
+const actualWeeklyNetIncome = computed(() => {
+  return props.jobs.reduce((sum, job) => {
+    const jobRateActive = convertUsdToActive(job.hourly_rate);
+    const taxRate = parseFloat(job.tax_rate) || 0;
+    const hours = parseFloat(job.avg_hours_per_week) || 0;
+    const gross = hours * jobRateActive;
+    const net = gross * (1 - taxRate / 100);
+    return sum + net;
+  }, 0);
+});
+
+const actualWeeklyNetSurplus = computed(() => {
+  return actualWeeklyNetIncome.value - props.actualWeeklyExpenseTotal - rentAmountActive.value;
+});
+
+const actualNetWeeksNeeded = computed(() => {
+  if (remainingNetDebt.value <= 0) return 0;
+  if (actualWeeklyNetSurplus.value <= 0) return Infinity;
+  return remainingNetDebt.value / actualWeeklyNetSurplus.value;
+});
+
+const actualNetBreakEvenDate = computed(() => {
+  if (actualNetWeeksNeeded.value === Infinity || remainingNetDebt.value <= 0) return null;
+  const d = new Date();
+  d.setDate(d.getDate() + Math.ceil(actualNetWeeksNeeded.value * 7));
+  return d;
+});
+
+const isSimulatorActive = computed(() => {
+  const isExpenseDiff = Math.abs(simulatedWeeklyExpense.value - props.actualWeeklyExpenseTotal) > 0.01;
+  const isHoursDiff = simulatedJobs.value.some(job => {
+    const origJob = props.jobs.find(j => j.job_type === job.job_type);
+    const origHours = origJob ? (origJob.avg_hours_per_week || 0) : 0;
+    return Math.abs(job.simHours - origHours) > 0.01;
+  });
+  return isExpenseDiff || isHoursDiff;
+});
+
+const simulatedDaysSaved = computed(() => {
+  if (!netBreakEvenDate.value || !actualNetBreakEvenDate.value) return 0;
+  const diffTime = actualNetBreakEvenDate.value.getTime() - netBreakEvenDate.value.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+});
+
+const formatDateShort = (date) => {
+  if (!date) return '';
+  return date.toLocaleDateString('th-TH', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+};
 
 // Date formatting helpers
 const formatDate = (date) => {

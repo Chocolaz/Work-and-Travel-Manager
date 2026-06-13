@@ -11,7 +11,7 @@
     </div>
 
     <!-- SVG Mascot Container -->
-    <div class="mascot-svg-wrapper">
+    <div class="mascot-svg-wrapper" @click="handleMascotClick" title="จิ้มแก้ม J-1 Mascot เพื่อทักทายกันได้น้า 🔄">
       <svg viewBox="0 0 200 230" width="100%" height="230px" xmlns="http://www.w3.org/2000/svg">
         <!-- Floating Sparkles (Level 3 - Happy) -->
         <g v-if="happinessLevel === 3" class="sparkles-group">
@@ -216,9 +216,9 @@
     </div>
 
     <!-- Motivational J-1 Quote based on mood and custom goal -->
-    <div class="mascot-quote-box">
+    <div class="mascot-quote-box" @click="handleMascotClick" title="คลิกสุ่มฟังคำพูดเพิ่มเติม 🔄">
       <span class="quote-sign font-display">💬</span>
-      <p class="quote-text font-body">{{ quoteText }}</p>
+      <p class="quote-text font-body">{{ clickedQuote || quoteText }}</p>
     </div>
   </div>
 </template>
@@ -253,6 +253,42 @@ const props = defineProps({
     required: true
   }
 });
+
+const clickedQuote = ref(null);
+let clickedQuoteTimer = null;
+
+const handleMascotClick = () => {
+  // Trigger elastic bounce animation
+  gsap.killTweensOf('#j1-mascot-group');
+  gsap.fromTo('#j1-mascot-group', 
+    { scaleY: 0.8 },
+    { scaleY: 1, duration: 0.65, ease: 'elastic.out(1, 0.3)' }
+  );
+
+  const quotes = [
+    "วันนี้กินข้าวหรือยังนาย? อย่าลืมกินข้าวให้ตรงเวลาน้า ทำงานเหนื่อยแย่เลย! 🍛",
+    "สัญชาติเด็ก J-1 หักค่าเช่าแค่ไหนก็บดขยี้ได้หมด! สู้ๆ นะนาย! 💪",
+    "เหนื่อยนักก็พักก่อนน้าาา แต่อย่าเพิ่งช้อปปิ้งออนไลน์ล่ะ เดี๋ยวเงินหมดดด! 🛍️",
+    "การออมเงินที่ดีคือการเริ่มตั้งแต่วันนี้! ท่องไว้เพื่อ Road Trip ปลายปี! 🗽",
+    "น้ำดื่มฟรีที่ทำงานคือสวรรค์! ช่วยประหยัดค่าเครื่องดื่มไปได้เยอะเลยล่ะเพื่อน J-1! 🥤",
+    "รู้ไหมว่าการทำงานจ๊อบสองช่วยเพิ่มอัตราการคืนทุนได้ดีสุดๆ เลยนะ! แต่ดูแลสุขภาพด้วยน้า 💼",
+    "ถ้าคืนทุนเมื่อไหร่ เราจะไปจิ้มแฮมเบอร์เกอร์ชิ้นใหญ่ๆ ฉลองกันเลย! 🍔",
+    "เย้! ดีใจที่มีคุณคอยบันทึกรายจ่ายด้วยกันทุกวันน้าาา~ 😊",
+    "คิดถึงส้มตำ ไก่ย่าง ของกินที่ไทยขึ้นมาเลยเนอะ คืนทุนแล้วค่อยบินกลับไปกินให้หายคิดถึงนะ! ✈️"
+  ];
+
+  let randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+  if (randomQuote === clickedQuote.value) {
+    randomQuote = quotes[(quotes.indexOf(randomQuote) + 1) % quotes.length];
+  }
+
+  clickedQuote.value = randomQuote;
+
+  if (clickedQuoteTimer) clearTimeout(clickedQuoteTimer);
+  clickedQuoteTimer = setTimeout(() => {
+    clickedQuote.value = null;
+  }, 5000);
+};
 
 // Helper: Convert to USD
 const getAmountInUSD = (amount, currency) => {
@@ -516,6 +552,11 @@ watch([happinessLevel, accessories], () => {
 .mascot-svg-wrapper {
   margin: 10px 0;
   filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.18));
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.mascot-svg-wrapper:hover {
+  transform: scale(1.05);
 }
 
 .mascot-quote-box {
@@ -528,6 +569,12 @@ watch([happinessLevel, accessories], () => {
   align-items: flex-start;
   gap: 10px;
   text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.mascot-quote-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0px #000;
 }
 
 .quote-sign {

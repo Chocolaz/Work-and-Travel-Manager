@@ -54,14 +54,33 @@
 
     <!-- Display Mode -->
     <div v-else class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #FFF9C4;">
-      <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--color-muted);">
-        เป้าหมายงบประมาณสัปดาห์นี้
-      </div>
-      <div style="font-size: 1.8rem; font-family: var(--font-display); font-weight: 900; margin: 6px 0; color: black;">
-        <template v-if="countdowns.weekly_expense_target > 0">
-          {{ formatCurrency(weeklyExpenseTargetConverted) }}
-        </template>
-        <template v-else>ยังไม่ระบุเป้าหมาย</template>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--color-muted);">
+            เป้าหมายงบประมาณสัปดาห์นี้
+          </div>
+          <div style="font-size: 1.8rem; font-family: var(--font-display); font-weight: 900; margin: 6px 0; color: black;">
+            <template v-if="countdowns.weekly_expense_target > 0">
+              {{ formatCurrency(weeklyExpenseTargetConverted) }}
+            </template>
+            <template v-else>ยังไม่ระบุเป้าหมาย</template>
+          </div>
+        </div>
+
+        <div v-if="countdowns.weekly_expense_target > 0" style="text-align: right;">
+          <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--color-muted);">
+            งบประมาณคงเหลือ
+          </div>
+          <div 
+            style="font-size: 1.4rem; font-family: var(--font-display); font-weight: 900; margin: 6px 0; display: inline-block; padding: 4px 10px; border: 2.5px solid #000; box-shadow: 2px 2px 0px #000; transform: rotate(1deg);"
+            :style="{
+              backgroundColor: isBudgetExceeded ? '#FFB3C6' : '#B9F7CA',
+              color: 'black'
+            }"
+          >
+            {{ isBudgetExceeded ? '-' : '' }}{{ formatCurrency(Math.abs(remainingBudget)) }}
+          </div>
+        </div>
       </div>
       
       <!-- Budget Comparison Progress Bar -->
@@ -200,6 +219,14 @@ const progressPercent = computed(() => {
   const target = weeklyExpenseTargetConverted.value;
   if (target <= 0) return 0;
   return (props.actualWeeklyExpenseTotal / target) * 100;
+});
+
+const remainingBudget = computed(() => {
+  return weeklyExpenseTargetConverted.value - props.actualWeeklyExpenseTotal;
+});
+
+const isBudgetExceeded = computed(() => {
+  return remainingBudget.value < 0;
 });
 
 const saveSettings = async () => {
