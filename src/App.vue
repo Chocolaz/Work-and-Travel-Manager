@@ -36,13 +36,20 @@
       />
 
       <!-- Navigation Tabs -->
-      <div class="neo-tabs" style="margin-bottom: 24px; justify-content: flex-start; gap: 12px;">
+      <div class="neo-tabs" style="margin-bottom: 24px; justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
         <button 
           @click="currentView = 'dashboard'" 
           :class="['neo-tab-btn', currentView === 'dashboard' ? 'active' : '']"
           style="padding: 10px 20px; font-size: 0.85rem; border-width: 3px; box-shadow: 3px 3px 0px #000;"
         >
           📊 แดชบอร์ด & เป้าหมาย (Dashboard)
+        </button>
+        <button 
+          @click="currentView = 'planner'" 
+          :class="['neo-tab-btn', currentView === 'planner' ? 'active' : '']"
+          style="padding: 10px 20px; font-size: 0.85rem; border-width: 3px; box-shadow: 3px 3px 0px #000;"
+        >
+          🎯 วางแผนคืนทุน (Planner)
         </button>
         <button 
           @click="currentView = 'transactions'" 
@@ -88,6 +95,15 @@
               :countdowns="countdowns"
               :exchange-rate="exchangeRate"
               :active-currency="activeCurrency"
+              :actual-weekly-expense-total="actualWeeklyExpenseTotal"
+              @update-countdowns="handleUpdateCountdowns"
+            />
+
+            <WeeklyBudgetCard 
+              :countdowns="countdowns"
+              :exchange-rate="exchangeRate"
+              :active-currency="activeCurrency"
+              :actual-weekly-expense-total="actualWeeklyExpenseTotal"
               @update-countdowns="handleUpdateCountdowns"
             />
           </div>
@@ -210,6 +226,20 @@
         />
       </div>
 
+      <!-- Tab 4: Planner View -->
+      <div v-else-if="currentView === 'planner'">
+        <BreakEvenPlanner
+          :project-costs-total="projectCostsTotal"
+          :total-income="totalIncome"
+          :daily-expenses="dailyExpenses"
+          :countdowns="countdowns"
+          :jobs="jobs"
+          :exchange-rate="exchangeRate"
+          :active-currency="activeCurrency"
+          :actual-weekly-expense-total="actualWeeklyExpenseTotal"
+        />
+      </div>
+
       <!-- Celebration Modal -->
       <div v-if="showCelebrateModal" class="neo-modal-overlay" style="z-index: 9999;" @click.self="closeCelebrateModal">
         <div class="neo-modal-content celebrate-modal-content" style="text-align: center; max-width: 500px; padding: 32px; border-width: 4px; transform: rotate(1deg);">
@@ -288,9 +318,11 @@ import CostForm from './components/CostForm.vue';
 import TransactionList from './components/TransactionList.vue';
 import GoalTracker from './components/GoalTracker.vue';
 import CountdownCards from './components/CountdownCards.vue';
+import WeeklyBudgetCard from './components/WeeklyBudgetCard.vue';
 import BadgesContainer from './components/BadgesContainer.vue';
 import J1Mascot from './components/J1Mascot.vue';
 import JobManager from './components/JobManager.vue';
+import BreakEvenPlanner from './components/BreakEvenPlanner.vue';
 
 // Auth State
 const token = ref(localStorage.getItem('wat_token') || '');
@@ -495,6 +527,39 @@ const dailyExpenses = computed(() => {
     }
     return sum;
   }, 0);
+});
+
+// Calculate actual weekly variable expense based on the last 4 weeks
+const actualWeeklyExpenseTotal = computed(() => {
+  const expenseTx = transactions.value.filter(t => t.type === 'expense');
+  if (expenseTx.length === 0) return 0;
+  
+  const now = new Date();
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(now.getDate() - 28);
+  
+  // Filter transactions in last 28 days
+  const recentTx = expenseTx.filter(t => new Date(t.date) >= fourWeeksAgo);
+  if (recentTx.length === 0) {
+    // Fall back to all history if no recent expenses
+    const dates = expenseTx.map(t => new Date(t.date));
+    const minDate = new Date(Math.min(...dates));
+    const diffDays = Math.ceil(Math.max(1, (now - minDate) / (1000 * 60 * 60 * 24)));
+    const elapsedWeeks = Math.max(1, diffDays / 7);
+    return dailyExpenses.value / elapsedWeeks;
+  }
+  
+  const totalRecent = recentTx.reduce((sum, tx) => {
+    const amt = parseFloat(tx.amount) || 0;
+    return sum + convertToActiveCurrency(amt, tx.currency);
+  }, 0);
+  
+  const dates = recentTx.map(t => new Date(t.date));
+  const minDate = new Date(Math.min(...dates));
+  const diffDays = Math.ceil(Math.max(1, (now - minDate) / (1000 * 60 * 60 * 24)));
+  const elapsedWeeks = Math.min(4, Math.max(1, diffDays / 7));
+  
+  return totalRecent / elapsedWeeks;
 });
 
 const totalExpenses = computed(() => {

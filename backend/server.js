@@ -70,6 +70,9 @@ db.exec(`
     pay_cycle TEXT,
     next_rent_day TEXT,
     rent_amount REAL,
+    weekly_expense_target REAL NOT NULL DEFAULT 0.0,
+    project_start_date TEXT DEFAULT '',
+    project_end_date TEXT DEFAULT '',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -80,6 +83,7 @@ db.exec(`
     title TEXT NOT NULL,
     hourly_rate REAL NOT NULL DEFAULT 0.0,
     tax_rate REAL NOT NULL DEFAULT 0.0,
+    avg_hours_per_week REAL NOT NULL DEFAULT 0.0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE(user_id, job_type)
   );
@@ -122,6 +126,46 @@ try {
 } catch (err) {
   if (!err.message.includes('duplicate column name')) {
     console.log('Migration info (tax_rate column):', err.message);
+  }
+}
+
+// Migration: add avg_hours_per_week column to jobs if missing
+try {
+  db.exec('ALTER TABLE jobs ADD COLUMN avg_hours_per_week REAL NOT NULL DEFAULT 0.0');
+  console.log('Migration: Successfully added "avg_hours_per_week" column to jobs table.');
+} catch (err) {
+  if (!err.message.includes('duplicate column name')) {
+    console.log('Migration info (avg_hours_per_week column):', err.message);
+  }
+}
+
+// Migration: add weekly_expense_target column to countdowns if missing
+try {
+  db.exec('ALTER TABLE countdowns ADD COLUMN weekly_expense_target REAL NOT NULL DEFAULT 0.0');
+  console.log('Migration: Successfully added "weekly_expense_target" column to countdowns table.');
+} catch (err) {
+  if (!err.message.includes('duplicate column name')) {
+    console.log('Migration info (weekly_expense_target column):', err.message);
+  }
+}
+
+// Migration: add project_start_date column to countdowns if missing
+try {
+  db.exec('ALTER TABLE countdowns ADD COLUMN project_start_date TEXT DEFAULT \'\'');
+  console.log('Migration: Successfully added "project_start_date" column to countdowns table.');
+} catch (err) {
+  if (!err.message.includes('duplicate column name')) {
+    console.log('Migration info (project_start_date column):', err.message);
+  }
+}
+
+// Migration: add project_end_date column to countdowns if missing
+try {
+  db.exec('ALTER TABLE countdowns ADD COLUMN project_end_date TEXT DEFAULT \'\'');
+  console.log('Migration: Successfully added "project_end_date" column to countdowns table.');
+} catch (err) {
+  if (!err.message.includes('duplicate column name')) {
+    console.log('Migration info (project_end_date column):', err.message);
   }
 }
 
@@ -191,7 +235,7 @@ app.post('/api/auth/register', (req, res) => {
   const insertUser = db.prepare('INSERT INTO users (id, username, password_hash, onboarded, created_at) VALUES (?, ?, ?, 0, ?)');
   const insertRate = db.prepare('INSERT INTO exchange_rate (user_id, rate, last_updated) VALUES (?, ?, ?)');
   const insertGoal = db.prepare('INSERT INTO savings_goal (user_id, title, target_amount, currency) VALUES (?, ?, ?, ?)');
-  const insertCountdown = db.prepare('INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount) VALUES (?, ?, ?, ?, ?)');
+  const insertCountdown = db.prepare('INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date) VALUES (?, ?, ?, ?, ?, 0.0, \'\', \'\')');
 
   const registerTx = db.transaction(() => {
     // 1. Create user
@@ -297,26 +341,33 @@ app.get('/api/data', authenticateToken, (req, res) => {
       savingsGoal.target_amount = parseFloat(savingsGoal.target_amount);
     }
 
-    const countdownStmt = db.prepare('SELECT next_payday, pay_cycle, next_rent_day, rent_amount FROM countdowns WHERE user_id = ?');
+    const countdownStmt = db.prepare('SELECT next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date FROM countdowns WHERE user_id = ?');
     let countdowns = countdownStmt.get(userId);
     if (!countdowns) {
-      countdowns = { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150.0 };
+      countdowns = { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150.0, weekly_expense_target: 0.0, project_start_date: '', project_end_date: '' };
     } else {
       countdowns.rent_amount = parseFloat(countdowns.rent_amount) || 0;
+      countdowns.weekly_expense_target = parseFloat(countdowns.weekly_expense_target) || 0;
+      countdowns.project_start_date = countdowns.project_start_date || '';
+      countdowns.project_end_date = countdowns.project_end_date || '';
     }
 
     // Fetch jobs - seed defaults if none exist
-    let jobs = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
+    let jobs = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
     if (!jobs || jobs.length === 0) {
-      const insertDefaultJob = db.prepare('INSERT OR IGNORE INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate) VALUES (?, ?, ?, ?, ?, ?)');
+      const insertDefaultJob = db.prepare('INSERT OR IGNORE INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week) VALUES (?, ?, ?, ?, ?, ?, 0.0)');
       const jobDefaults = [
         { type: 'main', title: 'งานหลัก (Main Job)', rate: 15.0, tax: 0.0 },
       ];
-      const seedTx = db.transaction(() => jobDefaults.forEach(j => insertDefaultJob.run(crypto.randomUUID(), userId, j.type, j.title, j.rate, j.tax)));
+      const seedTx = db.transaction(() => jobDefaults.forEach(j => insertDefaultJob.run(crypto.randomUUID(), userId, j.type, j.title, j.rate, j.tax, 0.0)));
       seedTx();
-      jobs = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
+      jobs = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
     }
-    jobs.forEach(j => { j.hourly_rate = parseFloat(j.hourly_rate) || 0; j.tax_rate = parseFloat(j.tax_rate) || 0; });
+    jobs.forEach(j => { 
+      j.hourly_rate = parseFloat(j.hourly_rate) || 0; 
+      j.tax_rate = parseFloat(j.tax_rate) || 0; 
+      j.avg_hours_per_week = parseFloat(j.avg_hours_per_week) || 0;
+    });
 
     // Fetch work logs
     const workLogs = db.prepare('SELECT id, job_type, date, start_time, end_time, break_minutes FROM work_logs WHERE user_id = ? ORDER BY date DESC, start_time DESC').all(userId);
@@ -503,18 +554,21 @@ app.put('/api/goals', authenticateToken, (req, res) => {
 
 // Update Countdowns Settings
 app.put('/api/countdowns', authenticateToken, (req, res) => {
-  const { nextPayday, payCycle, nextRentDay, rentAmount } = req.body;
+  const { nextPayday, payCycle, nextRentDay, rentAmount, weeklyExpenseTarget, projectStartDate, projectEndDate } = req.body;
   const userId = req.userId;
 
   try {
     const updateCountdownStmt = db.prepare(`
-      INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         next_payday = excluded.next_payday,
         pay_cycle = excluded.pay_cycle,
         next_rent_day = excluded.next_rent_day,
-        rent_amount = excluded.rent_amount
+        rent_amount = excluded.rent_amount,
+        weekly_expense_target = excluded.weekly_expense_target,
+        project_start_date = excluded.project_start_date,
+        project_end_date = excluded.project_end_date
     `);
 
     updateCountdownStmt.run(
@@ -522,14 +576,20 @@ app.put('/api/countdowns', authenticateToken, (req, res) => {
       nextPayday || '',
       payCycle || 'weekly',
       nextRentDay || '',
-      rentAmount !== undefined ? parseFloat(rentAmount) : 150
+      rentAmount !== undefined ? parseFloat(rentAmount) : 150,
+      weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
+      projectStartDate || '',
+      projectEndDate || ''
     );
 
     res.json({
       next_payday: nextPayday || '',
       pay_cycle: payCycle || 'weekly',
       next_rent_day: nextRentDay || '',
-      rent_amount: rentAmount !== undefined ? parseFloat(rentAmount) : 150
+      rent_amount: rentAmount !== undefined ? parseFloat(rentAmount) : 150,
+      weekly_expense_target: weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
+      project_start_date: projectStartDate || '',
+      project_end_date: projectEndDate || ''
     });
   } catch (err) {
     console.error('Update countdowns failed:', err);
@@ -567,24 +627,33 @@ app.put('/api/jobs', authenticateToken, (req, res) => {
       }
 
       const upsert = db.prepare(`
-        INSERT INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(user_id, job_type) DO UPDATE SET title = excluded.title, hourly_rate = excluded.hourly_rate, tax_rate = excluded.tax_rate
+        INSERT INTO jobs (id, user_id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, job_type) DO UPDATE SET 
+          title = excluded.title, 
+          hourly_rate = excluded.hourly_rate, 
+          tax_rate = excluded.tax_rate,
+          avg_hours_per_week = excluded.avg_hours_per_week
       `);
 
       jobs.forEach(j => {
         const rate = parseFloat(j.hourly_rate);
         const tax = Math.min(100, Math.max(0, parseFloat(j.tax_rate) || 0));
+        const avgHours = Math.max(0, parseFloat(j.avg_hours_per_week) || 0);
         if (!j.title || isNaN(rate) || rate < 0) return;
         const finalId = j.id || crypto.randomUUID();
         const finalJobType = j.job_type || `job_${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`;
-        upsert.run(finalId, userId, finalJobType, j.title.trim(), rate, tax);
+        upsert.run(finalId, userId, finalJobType, j.title.trim(), rate, tax, avgHours);
       });
     });
     tx();
     
-    const updated = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
-    updated.forEach(j => { j.hourly_rate = parseFloat(j.hourly_rate) || 0; j.tax_rate = parseFloat(j.tax_rate) || 0; });
+    const updated = db.prepare('SELECT id, job_type, title, hourly_rate, tax_rate, avg_hours_per_week FROM jobs WHERE user_id = ? ORDER BY rowid').all(userId);
+    updated.forEach(j => { 
+      j.hourly_rate = parseFloat(j.hourly_rate) || 0; 
+      j.tax_rate = parseFloat(j.tax_rate) || 0; 
+      j.avg_hours_per_week = parseFloat(j.avg_hours_per_week) || 0;
+    });
     res.json(updated);
   } catch (err) {
     console.error('Update jobs failed:', err);

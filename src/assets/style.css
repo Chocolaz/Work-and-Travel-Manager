@@ -367,6 +367,8 @@ tr:nth-child(even) {
 
 .countdown-box.payday { background-color: var(--color-income); }
 .countdown-box.housing { background-color: var(--color-expense); }
+.countdown-box.timeline { background-color: #E0F7FA; }
+.countdown-box.expense-target { background-color: #FFF9C4; }
 
 .countdown-num {
   font-family: var(--font-display);

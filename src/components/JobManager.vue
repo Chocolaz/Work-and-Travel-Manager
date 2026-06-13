@@ -34,6 +34,20 @@
             <span class="jm-rate-suffix">/hr</span>
           </div>
 
+          <!-- Average Hours per Week input -->
+          <div class="jm-rate-wrap jm-hours-wrap" title="ชั่วโมงงานที่คาดว่าจะได้รับต่อสัปดาห์">
+            <span class="jm-rate-prefix">⏱</span>
+            <input
+              v-model.number="job.avg_hours_per_week"
+              type="number"
+              min="0"
+              step="0.5"
+              class="neo-input jm-rate-input"
+              placeholder="0.0"
+            />
+            <span class="jm-rate-suffix">hr/wk</span>
+          </div>
+
           <div class="jm-rate-wrap jm-tax-wrap">
             <span class="jm-rate-prefix">%</span>
             <input
@@ -259,7 +273,9 @@ watch(() => props.jobs, (newJobs) => {
         id: null,
         job_type: 'main',
         title: 'งานหลัก (Main Job)',
-        hourly_rate: 15.0
+        hourly_rate: 15.0,
+        tax_rate: 0.0,
+        avg_hours_per_week: 0.0
       }];
     }
     jobsLoaded.value = true;
@@ -284,7 +300,9 @@ const addJob = () => {
     id: null,
     job_type: jobType,
     title: `งานใหม่ที่ {{ nextIndex }}`.replace('{{ nextIndex }}', nextIndex),
-    hourly_rate: 15.0
+    hourly_rate: 15.0,
+    tax_rate: 0.0,
+    avg_hours_per_week: 0.0
   });
 };
 
@@ -326,7 +344,8 @@ const saveJobs = async () => {
       job_type: j.job_type,
       title: j.title.trim(),
       hourly_rate: parseFloat(j.hourly_rate) || 0,
-      tax_rate: Math.min(100, Math.max(0, parseFloat(j.tax_rate) || 0))
+      tax_rate: Math.min(100, Math.max(0, parseFloat(j.tax_rate) || 0)),
+      avg_hours_per_week: Math.max(0, parseFloat(j.avg_hours_per_week) || 0)
     })));
     jobSaveSuccess.value = true;
     clearTimeout(saveSuccessTimer);
@@ -337,17 +356,21 @@ const saveJobs = async () => {
 };
 
 // ---- Log Work ----
-const today = new Date().toISOString().slice(0, 10);
 const logForm = ref({
   job_type: '',
-  date: today,
-  start_time: '08:00',
-  end_time: '16:00',
-  break_minutes: 30,
+  date: '',
+  start_time: '',
+  end_time: '',
+  break_minutes: 0,
 });
 const loggingWork = ref(false);
 
-// No auto-select: user must choose a job each time they log
+// Auto-select first job, but don't change if user has already picked
+watch(() => props.jobs, (newJobs) => {
+  if (newJobs && newJobs.length > 0 && !logForm.value.job_type) {
+    logForm.value.job_type = newJobs[0].job_type;
+  }
+}, { immediate: true });
 
 const calcHoursFromForm = (start, end, breakMin) => {
   if (!start || !end) return 0;
@@ -386,12 +409,14 @@ const logWork = async () => {
   loggingWork.value = true;
   try {
     await emit('add-work-log', { ...logForm.value });
+    // Reset: keep first job selected, clear date & time
+    const firstJob = props.jobs.length > 0 ? props.jobs[0].job_type : '';
     logForm.value = { 
-      job_type: '',
-      date: today, 
-      start_time: '08:00', 
-      end_time: '16:00', 
-      break_minutes: 30 
+      job_type: firstJob,
+      date: '',
+      start_time: '',
+      end_time: '',
+      break_minutes: 0
     };
   } finally {
     loggingWork.value = false;
@@ -455,13 +480,17 @@ const deleteLog = async (id) => {
 
 .jm-job-row {
   display: grid;
-  grid-template-columns: 90px 1fr auto auto auto;
+  grid-template-columns: 90px 1fr auto auto auto auto;
   gap: 10px;
   align-items: center;
 }
 
 .jm-tax-wrap {
   background: #FFF9E6;
+}
+
+.jm-hours-wrap {
+  background: #E6F9FF;
 }
 
 .jm-job-type-badge {

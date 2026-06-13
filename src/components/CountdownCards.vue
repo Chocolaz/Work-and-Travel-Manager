@@ -44,8 +44,22 @@
             <input type="date" v-model="editNextRentDay" :min="minDate" style="padding: 6px 10px; border-width: 2px;" />
           </div>
           <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.65rem;">ค่าเช่าบ้านรายสัปดาห์ (USD)</label>
+            <label style="font-size: 0.65rem;">ค่าเช่าบ้านรายสัปดาห์ ({{ activeCurrency }})</label>
             <input type="number" v-model.number="editRentAmount" min="0" style="padding: 6px 10px; border-width: 2px;" />
+          </div>
+        </div>
+
+
+        <!-- Project Duration Config -->
+        <h3 class="heading-font" style="font-size: 0.8rem; margin-bottom: 8px; color: var(--color-muted); margin-top: 16px;">✈️ ตั้งค่าช่วงเวลาโครงการ</h3>
+        <div class="form-row" style="margin-bottom: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">วันเริ่มโครงการ</label>
+            <input type="date" v-model="editProjectStartDate" style="padding: 6px 10px; border-width: 2px;" />
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">วันจบโครงการ</label>
+            <input type="date" v-model="editProjectEndDate" style="padding: 6px 10px; border-width: 2px;" />
           </div>
         </div>
 
@@ -56,7 +70,7 @@
     </div>
 
     <!-- Display Mode -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
       <!-- Payday Countdown -->
       <div class="countdown-box payday">
         <span style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase;">วันรับเงินครั้งถัดไป</span>
@@ -84,6 +98,18 @@
           </div>
         </div>
       </div>
+
+      <!-- J-1 Project Countdown -->
+      <div class="countdown-box timeline">
+        <span style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: black;">ระยะเวลาโครงการ J-1 ✈️</span>
+        <div>
+          <div class="countdown-num">{{ projectStatus.timeText }}</div>
+          <div style="font-size: 0.7rem; font-weight: 700; opacity: 0.8; color: var(--color-muted);">
+            {{ projectStatus.subText }}
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -105,6 +131,10 @@ const props = defineProps({
   activeCurrency: {
     type: String,
     required: true
+  },
+  actualWeeklyExpenseTotal: {
+    type: Number,
+    default: 0
   }
 });
 
@@ -115,7 +145,9 @@ const isEditing = ref(false);
 const editNextPayday = ref(props.countdowns.next_payday || '');
 const editPayCycle = ref(props.countdowns.pay_cycle || 'weekly');
 const editNextRentDay = ref(props.countdowns.next_rent_day || '');
-const editRentAmount = ref(props.countdowns.rent_amount || 150);
+const editRentAmount = ref(150);
+const editProjectStartDate = ref(props.countdowns.project_start_date || '');
+const editProjectEndDate = ref(props.countdowns.project_end_date || '');
 
 // Get tomorrow's date formatted as YYYY-MM-DD for min attribute validation
 const getTomorrowDateString = () => {
@@ -125,13 +157,50 @@ const getTomorrowDateString = () => {
 };
 const minDate = ref(getTomorrowDateString());
 
+// Sync Rent Amount edit value from USD to active currency
+const syncEditRentAmount = () => {
+  const rawVal = parseFloat(props.countdowns?.rent_amount) || 150;
+  if (props.activeCurrency === 'USD') {
+    editRentAmount.value = rawVal;
+  } else {
+    const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
+    editRentAmount.value = parseFloat((rawVal * rate).toFixed(2));
+  }
+};
+
 // Sync edits with props from server
+watch(isEditing, (newVal) => {
+  if (newVal) {
+    editNextPayday.value = props.countdowns.next_payday || '';
+    editPayCycle.value = props.countdowns.pay_cycle || 'weekly';
+    editNextRentDay.value = props.countdowns.next_rent_day || '';
+    editProjectStartDate.value = props.countdowns.project_start_date || '';
+    editProjectEndDate.value = props.countdowns.project_end_date || '';
+    syncEditRentAmount();
+  }
+});
+
 watch(() => props.countdowns, (newVal) => {
-  editNextPayday.value = newVal.next_payday || '';
-  editPayCycle.value = newVal.pay_cycle || 'weekly';
-  editNextRentDay.value = newVal.next_rent_day || '';
-  editRentAmount.value = newVal.rent_amount || 150;
+  if (isEditing.value) {
+    editNextPayday.value = newVal.next_payday || '';
+    editPayCycle.value = newVal.pay_cycle || 'weekly';
+    editNextRentDay.value = newVal.next_rent_day || '';
+    editProjectStartDate.value = newVal.project_start_date || '';
+    editProjectEndDate.value = newVal.project_end_date || '';
+    syncEditRentAmount();
+  }
 }, { deep: true });
+
+// Convert Rent Amount target value if currency switches while editing
+watch(() => props.activeCurrency, (newCurrency, oldCurrency) => {
+  if (!isEditing.value) return;
+  const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
+  if (oldCurrency === 'USD' && newCurrency === 'THB') {
+    editRentAmount.value = parseFloat((editRentAmount.value * rate).toFixed(2));
+  } else if (oldCurrency === 'THB' && newCurrency === 'USD') {
+    editRentAmount.value = parseFloat((editRentAmount.value / rate).toFixed(2));
+  }
+});
 
 // Convert Rent Amount to Active Display Currency
 const rentAmountActive = computed(() => {
@@ -222,6 +291,69 @@ const rentStatus = computed(() => {
   }
 });
 
+// Calculate J-1 Project Countdown Status
+// Calculate J-1 Project Countdown Status
+const projectStatus = computed(() => {
+  const start = props.countdowns?.project_start_date;
+  const end = props.countdowns?.project_end_date;
+  if (!start || !end) {
+    return { status: 'unset', timeText: 'ยังไม่ตั้งค่า', subText: 'วันเริ่ม-จบโครงการ' };
+  }
+  
+  const nowVal = now.value;
+  // Use start date midnight and end date end of day
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T23:59:59`);
+  
+  if (nowVal < startDate) {
+    const diffMs = startDate.getTime() - nowVal.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+    
+    const hours = diffHrs % 24;
+    const minutes = diffMin % 60;
+    const seconds = diffSec % 60;
+    
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+    
+    return { 
+      status: 'not-started', 
+      timeText: `${diffDays} วัน ${hh}:${mm}:${ss}`, 
+      subText: `นับถอยหลังวันเริ่มโครงการ: ${start}` 
+    };
+  } else if (nowVal >= startDate && nowVal <= endDate) {
+    const diffMs = endDate.getTime() - nowVal.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+    
+    const hours = diffHrs % 24;
+    const minutes = diffMin % 60;
+    const seconds = diffSec % 60;
+    
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+    
+    return { 
+      status: 'running', 
+      timeText: `${diffDays} วัน ${hh}:${mm}:${ss}`, 
+      subText: `นับถอยหลังวันจบโครงการ: ${end}` 
+    };
+  } else {
+    return { 
+      status: 'ended', 
+      timeText: 'สิ้นสุดแล้ว 🎓', 
+      subText: `จบเมื่อ: ${end}` 
+    };
+  }
+});
+
 const saveSettings = async () => {
   // Validate dates: must be strictly greater than today (i.e., tomorrow onwards)
   const todayStr = new Date().toISOString().split('T')[0];
@@ -235,11 +367,25 @@ const saveSettings = async () => {
     return;
   }
 
+  if (editProjectStartDate.value && editProjectEndDate.value && editProjectStartDate.value >= editProjectEndDate.value) {
+    await showAlert('วันเริ่มโครงการต้องเกิดก่อนวันจบโครงการน้า!', 'ข้อมูลไม่ถูกต้อง ⚠️');
+    return;
+  }
+
+  let rentUSD = parseFloat(editRentAmount.value) || 0;
+  if (props.activeCurrency === 'THB') {
+    const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
+    rentUSD = parseFloat((rentUSD / rate).toFixed(2));
+  }
+
   emit('update-countdowns', {
     nextPayday: editNextPayday.value,
     payCycle: editPayCycle.value,
     nextRentDay: editNextRentDay.value,
-    rentAmount: parseFloat(editRentAmount.value) || 0
+    rentAmount: rentUSD,
+    weeklyExpenseTarget: props.countdowns.weekly_expense_target || 0,
+    projectStartDate: editProjectStartDate.value,
+    projectEndDate: editProjectEndDate.value
   });
   isEditing.value = false;
 };

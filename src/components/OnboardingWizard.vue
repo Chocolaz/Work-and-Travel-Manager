@@ -12,7 +12,7 @@
       <!-- Step Indicators -->
       <div class="neo-tabs" style="justify-content: center; margin-bottom: 24px;">
         <div 
-          v-for="s in 4" 
+          v-for="s in 5" 
           :key="s" 
           :class="['neo-tab-btn', step === s ? 'active' : '']"
           style="cursor: default; pointer-events: none; border-width: 2px; padding: 6px 12px; font-size: 0.75rem;"
@@ -51,6 +51,7 @@
               {{ isFetchingRate ? 'กำลังดึงข้อมูล...' : 'ดึงค่าเงินล่าสุด 🔄' }}
             </button>
           </div>
+          <small v-if="errors.rate" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.rate }}</small>
         </div>
 
         <div class="form-group" style="margin-top: 20px;">
@@ -76,11 +77,109 @@
         </div>
       </div>
 
-      <!-- STEP 2: Savings Goal Settings -->
+      <!-- STEP 2: J-1 Jobs Settings -->
       <div v-if="step === 2" class="step-content">
         <h2 class="heading-font" style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <span class="sticker" style="font-size: 0.9rem; width: 24px; height: 24px; background-color: white;">💼</span>
+          <span>2. ตั้งค่าข้อมูลงาน J-1 และเวลาทำงาน</span>
+        </h2>
+        <p style="font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: var(--color-muted);">
+          ระบุอัตราค่าจ้างและจำนวนชั่วโมงทำงานโดยเฉลี่ย เพื่อคำนวณวันคืนทุนบนแดชบอร์ด
+        </p>
+
+        <!-- Main Job -->
+        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px;">💼 งานหลัก (Main Job)</h3>
+        <div class="form-group">
+          <label>ชื่อตำแหน่งงานหลัก</label>
+          <input type="text" v-model="mainJobTitle" placeholder="เช่น Server, Lifeguard" required style="padding: 8px 12px; border-width: 2px;" />
+          <small v-if="errors.mainJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.mainJobTitle }}</small>
+        </div>
+        <div class="form-row" style="margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
+            <input type="number" v-model.number="mainJobRate" min="0" step="0.01" required style="padding: 6px 10px; border-width: 2px;" />
+            <small v-if="errors.mainJobRate" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.mainJobRate }}</small>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">ชั่วโมงเฉลี่ย / สัปดาห์</label>
+            <input type="number" v-model.number="mainJobHours" min="0" step="1" required style="padding: 6px 10px; border-width: 2px;" />
+            <small v-if="errors.mainJobHours" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.mainJobHours }}</small>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">ภาษี (%)</label>
+            <input type="number" v-model.number="mainJobTax" min="0" max="100" required style="padding: 6px 10px; border-width: 2px;" />
+            <small v-if="errors.mainJobTax" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.mainJobTax }}</small>
+          </div>
+        </div>
+
+        <!-- Second Job Option -->
+        <div style="margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="check-second-job" v-model="hasSecondJob" style="cursor: pointer; width: 18px; height: 18px;" />
+          <label for="check-second-job" style="font-size: 0.8rem; font-weight: 800; cursor: pointer;">มีงานที่สอง (Second Job)</label>
+        </div>
+
+        <div v-if="hasSecondJob" class="neo-card" style="padding: 12px; margin-bottom: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000;">
+          <div class="form-group">
+            <label>ชื่อตำแหน่งงานที่สอง</label>
+            <input type="text" v-model="secondJobTitle" placeholder="เช่น Kitchen Help, Cashier" style="padding: 8px 12px; border-width: 2px;" />
+            <small v-if="errors.secondJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.secondJobTitle }}</small>
+          </div>
+          <div class="form-row" style="margin-bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
+              <input type="number" v-model.number="secondJobRate" min="0" step="0.01" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.secondJobRate" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.secondJobRate }}</small>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ชั่วโมงเฉลี่ย / สัปดาห์</label>
+              <input type="number" v-model.number="secondJobHours" min="0" step="1" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.secondJobHours" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.secondJobHours }}</small>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ภาษี (%)</label>
+              <input type="number" v-model.number="secondJobTax" min="0" max="100" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.secondJobTax" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.secondJobTax }}</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Third Job Option -->
+        <div style="margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="check-third-job" v-model="hasThirdJob" style="cursor: pointer; width: 18px; height: 18px;" />
+          <label for="check-third-job" style="font-size: 0.8rem; font-weight: 800; cursor: pointer;">มีงานที่สาม (Third Job)</label>
+        </div>
+
+        <div v-if="hasThirdJob" class="neo-card" style="padding: 12px; margin-bottom: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000;">
+          <div class="form-group">
+            <label>ชื่อตำแหน่งงานที่สาม</label>
+            <input type="text" v-model="thirdJobTitle" placeholder="เช่น Housekeeper, Fast Food" style="padding: 8px 12px; border-width: 2px;" />
+            <small v-if="errors.thirdJobTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.thirdJobTitle }}</small>
+          </div>
+          <div class="form-row" style="margin-bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ค่าจ้างต่อชั่วโมง (USD)</label>
+              <input type="number" v-model.number="thirdJobRate" min="0" step="0.01" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.thirdJobRate" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.thirdJobRate }}</small>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ชั่วโมงเฉลี่ย / สัปดาห์</label>
+              <input type="number" v-model.number="thirdJobHours" min="0" step="1" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.thirdJobHours" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.thirdJobHours }}</small>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">ภาษี (%)</label>
+              <input type="number" v-model.number="thirdJobTax" min="0" max="100" style="padding: 6px 10px; border-width: 2px;" />
+              <small v-if="errors.thirdJobTax" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.thirdJobTax }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Savings Goal Settings -->
+      <div v-if="step === 3" class="step-content">
+        <h2 class="heading-font" style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           <span class="sticker" style="font-size: 0.9rem; width: 24px; height: 24px; background-color: white;">🎯</span>
-          <span>2. เป้าหมายการออมเงิน (Savings Goal)</span>
+          <span>3. เป้าหมายการออมเงิน (Savings Goal)</span>
         </h2>
         <p style="font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: var(--color-muted);">
           ตั้งเป้าหมายสำหรับการออมเงินหลังจากที่เริ่มได้กำไร (คืนทุนค่าโครงการเรียบร้อยแล้ว) เช่น ไปเที่ยวต่างรัฐ ช้อปปิ้ง หรือซื้อของกลับไทย
@@ -93,7 +192,9 @@
             v-model="goalTitle" 
             placeholder="เช่น Road Trip to Grand Canyon! 🏞️" 
             required
+            style="padding: 8px 12px; border-width: 2px;"
           />
+          <small v-if="errors.goalTitle" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.goalTitle }}</small>
         </div>
 
         <div class="form-row">
@@ -105,11 +206,13 @@
               min="0" 
               placeholder="เช่น 2500" 
               required
+              style="padding: 8px 12px; border-width: 2px;"
             />
+            <small v-if="errors.goalAmount" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.goalAmount }}</small>
           </div>
           <div class="form-group">
             <label>สกุลเงิน</label>
-            <select v-model="goalCurrency">
+            <select v-model="goalCurrency" style="padding: 8px 12px; border-width: 2px;">
               <option value="USD">USD ($)</option>
               <option value="THB">THB (฿)</option>
             </select>
@@ -117,97 +220,100 @@
         </div>
       </div>
 
-      <!-- STEP 3: Project Costs Input -->
-      <div v-if="step === 3" class="step-content">
+      <!-- STEP 4: Project Costs Input -->
+      <div v-if="step === 4" class="step-content">
         <h2 class="heading-font" style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           <span class="sticker" style="font-size: 0.9rem; width: 24px; height: 24px; background-color: white;">💵</span>
-          <span>3. บันทึกค่าใช้จ่ายโครงการ</span>
+          <span>4. บันทึกค่าใช้จ่ายโครงการ</span>
         </h2>
         <p style="font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: var(--color-muted);">
-          ระบุค่าใช้จ่ายโครงการจริงที่คุณจ่ายไปแล้ว สามารถเพิ่ม ลบ หรือแก้ไขข้อมูลต่างๆ ได้ตามต้องการ
+          กรอกค่าใช้จ่ายก้อนใหญ่ทั้งหมดที่เสียไปก่อนหน้านี้เพื่อนำไปรวมคำนวณการหาจุดคุ้มทุน
         </p>
 
-        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px; margin-bottom: 16px;">
-          <div 
-            v-for="(cost, index) in initialCosts" 
-            :key="cost.id"
-            class="neo-card"
-            style="padding: 12px; margin-bottom: 12px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #FAF9F5;"
+        <div 
+          v-for="(cost, index) in initialCosts" 
+          :key="cost.id" 
+          class="neo-card" 
+          style="padding: 12px; margin-bottom: 16px; border-width: 2px; position: relative; box-shadow: 2px 2px 0px #000;"
+        >
+          <button 
+            type="button" 
+            style="position: absolute; top: -6px; right: -6px; background-color: var(--color-error); border: 2px solid #000; font-size: 0.7rem; width: 22px; height: 22px; cursor: pointer; border-radius: 4px;"
+            @click="removeCostItem(index)"
+            title="ลบรายการ"
           >
-            <div class="form-group" style="margin-bottom: 8px;">
-              <label style="font-size: 0.7rem;">รายการ</label>
-              <input 
-                type="text" 
-                v-model="cost.name" 
-                placeholder="ชื่อค่าใช้จ่าย เช่น ค่าวีซ่า" 
-                required
-                style="padding: 6px 10px; border-width: 2px;"
-              />
-            </div>
+            ❌
+          </button>
+          
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label style="font-size: 0.65rem;">ชื่อรายการค่าใช้จ่าย</label>
+            <input type="text" v-model="cost.name" required style="padding: 6px; font-size: 0.8rem; border-width: 2px;" />
+            <small v-if="errors.costs && errors.costs[index] && errors.costs[index].name" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.costs[index].name }}</small>
+          </div>
 
-            <div class="form-row" style="margin-bottom: 0;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.7rem;">จำนวนเงิน</label>
-                <input 
-                  type="number" 
-                  v-model.number="cost.amount" 
-                  step="0.01" 
-                  min="0" 
-                  placeholder="0.00"
-                  required
-                  style="padding: 6px 10px; border-width: 2px;"
-                />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.7rem;">สกุลเงิน</label>
-                <select :value="cost.currency" @change="changeCostCurrency(cost, $event.target.value)" style="padding: 6px 10px; border-width: 2px;">
-                  <option value="THB">THB (฿)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
-              </div>
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">จำนวนเงิน</label>
+              <input type="number" v-model.number="cost.amount" min="1" required style="padding: 6px; font-size: 0.8rem; border-width: 2px;" />
+              <small v-if="errors.costs && errors.costs[index] && errors.costs[index].amount" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.costs[index].amount }}</small>
             </div>
-
-            <button 
-              type="button" 
-              class="neo-btn danger-btn" 
-              style="padding: 4px 10px; font-size: 0.7rem; box-shadow: 2px 2px 0px #000; margin-top: 12px; border-width: 2px;" 
-              @click="removeCostItem(index)"
-            >
-              ลบรายการ 🗑️
-            </button>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.65rem;">สกุลเงิน</label>
+              <select :value="cost.currency" @change="changeCostCurrency(cost, $event.target.value)" style="padding: 6px; font-size: 0.8rem; border-width: 2px;">
+                <option value="USD">USD ($)</option>
+                <option value="THB">THB (฿)</option>
+              </select>
+            </div>
           </div>
         </div>
+        <small v-if="errors.costsGlobal" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block; margin-bottom: 12px;">{{ errors.costsGlobal }}</small>
 
         <button 
           type="button" 
           class="neo-btn secondary-btn" 
-          style="width: 100%; padding: 10px; font-size: 0.85rem;" 
+          style="width: 100%; padding: 10px; font-size: 0.85rem; border-width: 2px;" 
           @click="addCostItem"
         >
           เพิ่มค่าใช้จ่ายโครงการใหม่ ➕
         </button>
       </div>
 
-      <!-- STEP 4: Countdowns Config -->
-      <div v-if="step === 4" class="step-content">
+      <!-- STEP 5: Timelines & Weekly Budget Config -->
+      <div v-if="step === 5" class="step-content">
         <h2 class="heading-font" style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           <span class="sticker" style="font-size: 0.9rem; width: 24px; height: 24px; background-color: white;">⏰</span>
-          <span>4. ตั้งค่าวันรับเงินและค่าเช่าบ้าน</span>
+          <span>5. ตั้งค่าระยะเวลาโครงการและการเงิน</span>
         </h2>
         <p style="font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: var(--color-muted);">
-          กำหนดวันเวลาสำหรับการแจ้งเตือนและการนับถอยหลังในการใช้ชีวิตต่างแดน
+          กำหนดกรอบเวลาระยะเวลาโครงการ J-1 วันจ่ายเงิน และงบเป้าหมายรายสัปดาห์
         </p>
 
+        <!-- Project Duration Config -->
+        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px;">✈️ ช่วงเวลาโครงการ J-1</h3>
+        <div class="form-row" style="margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">วันเริ่มโครงการ</label>
+            <input type="date" v-model="projectStartDate" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
+            <small v-if="errors.projectStartDate" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.projectStartDate }}</small>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.65rem;">วันจบโครงการ</label>
+            <input type="date" v-model="projectEndDate" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
+            <small v-if="errors.projectEndDate" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.projectEndDate }}</small>
+          </div>
+        </div>
+
         <!-- Payday settings -->
-        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px;">💵 ตั้งค่าวันรับเงินเดือนรอบถัดไป</h3>
-        <div class="form-row" style="margin-bottom: 16px;">
+        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px; margin-top: 16px;">💵 วันรับเงินเดือน</h3>
+        <div class="form-row" style="margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.65rem;">วันรับเงินครั้งถัดไป</label>
-            <input type="date" v-model="nextPayday" :min="minDate" style="padding: 6px 10px; border-width: 2px;" />
+            <input type="date" v-model="nextPayday" :min="minDate" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
+            <small v-if="errors.nextPayday" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.nextPayday }}</small>
           </div>
           <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.65rem;">รอบการจ่ายเงิน</label>
-            <select v-model="payCycle" style="padding: 6px 10px; border-width: 2px;">
+            <select v-model="payCycle" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;">
               <option value="weekly">ทุกสัปดาห์ (Weekly)</option>
               <option value="bi-weekly">ทุก 2 สัปดาห์ (Bi-weekly)</option>
               <option value="monthly">รายเดือน (Monthly)</option>
@@ -216,16 +322,48 @@
         </div>
 
         <!-- Rent settings -->
-        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px; margin-top: 16px;">🏠 ตั้งค่ากำหนดชำระค่าเช่าบ้าน</h3>
-        <div class="form-row" style="margin-bottom: 16px;">
+        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px; margin-top: 16px;">🏠 กำหนดชำระค่าเช่าบ้าน</h3>
+        <div class="form-row" style="margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.65rem;">วันจ่ายค่าเช่าครั้งถัดไป</label>
-            <input type="date" v-model="nextRentDay" :min="minDate" style="padding: 6px 10px; border-width: 2px;" />
+            <input type="date" v-model="nextRentDay" :min="minDate" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
+            <small v-if="errors.nextRentDay" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.nextRentDay }}</small>
           </div>
           <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.65rem;">ค่าเช่าบ้านรายสัปดาห์ (USD)</label>
-            <input type="number" v-model.number="rentAmount" min="0" style="padding: 6px 10px; border-width: 2px;" />
+            <label style="font-size: 0.65rem;">ค่าเช่าบ้านรายสัปดาห์ ({{ activeCurrency }})</label>
+            <input type="number" v-model.number="rentAmount" min="0" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
+            <small v-if="errors.rentAmount" style="color: var(--color-error); font-weight: 800; font-size: 0.65rem; margin-top: 4px; display: block;">{{ errors.rentAmount }}</small>
           </div>
+        </div>
+
+        <!-- Weekly Expense Target Config -->
+        <h3 class="heading-font" style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 8px; margin-top: 16px;">🎯 งบประมาณค่าใช้จ่ายรายสัปดาห์</h3>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-size: 0.65rem; display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>เป้าหมายค่าใช้จ่ายต่อสัปดาห์ ({{ activeCurrency }})</span>
+            <span style="font-weight: 800; color: var(--color-muted);">ขีดจำกัด: 0 - {{ maxLimit }}</span>
+          </label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input 
+              type="range" 
+              v-model.number="weeklyExpenseTarget" 
+              min="0" 
+              :max="maxLimit" 
+              step="1"
+              style="width: 100%; accent-color: var(--color-accent); cursor: pointer;"
+            />
+            <input 
+              type="number" 
+              v-model.number="weeklyExpenseTarget" 
+              min="0" 
+              :max="maxLimit" 
+              required 
+              style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" 
+              placeholder="0" 
+              step="any"
+            />
+          </div>
+          <small v-if="errors.weeklyExpenseTarget" style="color: var(--color-error); font-weight: 800; font-size: 0.72rem; margin-top: 4px; display: block;">{{ errors.weeklyExpenseTarget }}</small>
         </div>
       </div>
 
@@ -244,7 +382,7 @@
         </button>
         
         <button 
-          v-if="step < 4"
+          v-if="step < 5"
           type="button" 
           class="neo-btn tilted-right"
           style="flex: 1.5; padding: 12px;"
@@ -269,7 +407,7 @@
 </template>
 
 <script setup>
-import { ref, watch, inject } from 'vue';
+import { ref, computed, watch, inject } from 'vue';
 
 const showAlert = inject('showAlert');
 
@@ -285,12 +423,31 @@ const emit = defineEmits(['onboarding-complete', 'change-currency']);
 const step = ref(1);
 const isFetchingRate = ref(false);
 const isSubmitting = ref(false);
+const errors = ref({});
 
 // Step 1: Exchange Rate & Display currency
 const rate = ref(35.00);
 const activeCurrency = ref('USD');
 
-// Step 2: Goal settings
+// Step 2: Jobs settings (Main, Second, Third)
+const mainJobTitle = ref('Server');
+const mainJobRate = ref(15);
+const mainJobTax = ref(12);
+const mainJobHours = ref(32);
+
+const hasSecondJob = ref(false);
+const secondJobTitle = ref('Kitchen Help');
+const secondJobRate = ref(15);
+const secondJobTax = ref(12);
+const secondJobHours = ref(20);
+
+const hasThirdJob = ref(false);
+const thirdJobTitle = ref('Housekeeper');
+const thirdJobRate = ref(15);
+const thirdJobTax = ref(12);
+const thirdJobHours = ref(15);
+
+// Step 3: Goal settings
 const goalTitle = ref('เก็บเงินเที่ยว Road Trip! 🏞️');
 const goalAmount = ref(1500);
 const goalCurrency = ref('USD');
@@ -305,7 +462,7 @@ watch(goalCurrency, (newVal, oldVal) => {
   }
 });
 
-// Step 3: Project Costs setup (custom checkbox seeding)
+// Step 4: Project Costs setup (custom checkbox seeding)
 const initialCosts = ref([
   { id: `pc-0-${Math.random().toString(36).substring(2, 6)}`, name: 'ค่าธรรมเนียมโครงการ', amount: 68000.0, currency: 'THB' },
   { id: `pc-1-${Math.random().toString(36).substring(2, 6)}`, name: 'ค่าตั๋วเครื่องบิน', amount: 42000.0, currency: 'THB' }
@@ -338,11 +495,33 @@ const removeCostItem = (index) => {
   initialCosts.value.splice(index, 1);
 };
 
-// Step 4: Countdowns setup
+// Step 5: Timelines & Weekly Budget Config
+const projectStartDate = ref('');
+const projectEndDate = ref('');
 const nextPayday = ref('');
 const payCycle = ref('weekly');
 const nextRentDay = ref('');
 const rentAmount = ref(150);
+const weeklyExpenseTarget = ref(150);
+
+// Calculate dynamic maximum budget limit (1000 USD converted to activeCurrency)
+const maxLimit = computed(() => {
+  if (activeCurrency.value === 'USD') return 1000;
+  return Math.round(1000 * rate.value);
+});
+
+// Watch activeCurrency to convert rentAmount and weeklyExpenseTarget values
+watch(activeCurrency, (newCurrency, oldCurrency) => {
+  if (newCurrency !== oldCurrency) {
+    if (newCurrency === 'THB') {
+      rentAmount.value = parseFloat((rentAmount.value * rate.value).toFixed(2));
+      weeklyExpenseTarget.value = parseFloat((weeklyExpenseTarget.value * rate.value).toFixed(2));
+    } else {
+      rentAmount.value = parseFloat((rentAmount.value / rate.value).toFixed(2));
+      weeklyExpenseTarget.value = parseFloat((weeklyExpenseTarget.value / rate.value).toFixed(2));
+    }
+  }
+});
 
 // Get tomorrow's date formatted as YYYY-MM-DD for min attribute validation
 const getTomorrowDateString = () => {
@@ -356,8 +535,213 @@ const prevStep = () => {
   if (step.value > 1) step.value--;
 };
 
-const nextStep = () => {
-  if (step.value < 4) step.value++;
+const validateStep = (s) => {
+  if (s === 1) {
+    if (!rate.value || rate.value <= 0) {
+      errors.value.rate = 'กรุณากรอกอัตราแลกเปลี่ยนอ้างอิงให้มากกว่า 0';
+      return false;
+    } else {
+      delete errors.value.rate;
+    }
+  } else if (s === 2) {
+    let hasError = false;
+    if (!mainJobTitle.value || mainJobTitle.value.trim() === '') {
+      errors.value.mainJobTitle = 'กรุณากรอกชื่อตำแหน่งงานหลัก';
+      hasError = true;
+    } else {
+      delete errors.value.mainJobTitle;
+    }
+    if (mainJobRate.value === null || mainJobRate.value === undefined || mainJobRate.value < 0) {
+      errors.value.mainJobRate = 'ค่าจ้างต่อชั่วโมงต้องไม่ต่ำกว่า 0';
+      hasError = true;
+    } else {
+      delete errors.value.mainJobRate;
+    }
+    if (mainJobHours.value === null || mainJobHours.value === undefined || mainJobHours.value < 0) {
+      errors.value.mainJobHours = 'กรุณากรอกชั่วโมงทำงานเฉลี่ย';
+      hasError = true;
+    } else {
+      delete errors.value.mainJobHours;
+    }
+    if (mainJobTax.value === null || mainJobTax.value === undefined || mainJobTax.value < 0 || mainJobTax.value > 100) {
+      errors.value.mainJobTax = 'กรุณากรอกอัตราภาษี 0 - 100%';
+      hasError = true;
+    } else {
+      delete errors.value.mainJobTax;
+    }
+
+    if (hasSecondJob.value) {
+      if (!secondJobTitle.value || secondJobTitle.value.trim() === '') {
+        errors.value.secondJobTitle = 'กรุณากรอกชื่อตำแหน่งงานที่สอง';
+        hasError = true;
+      } else {
+        delete errors.value.secondJobTitle;
+      }
+      if (secondJobRate.value === null || secondJobRate.value === undefined || secondJobRate.value < 0) {
+        errors.value.secondJobRate = 'ค่าจ้างต่อชั่วโมงต้องไม่ต่ำกว่า 0';
+        hasError = true;
+      } else {
+        delete errors.value.secondJobRate;
+      }
+      if (secondJobHours.value === null || secondJobHours.value === undefined || secondJobHours.value < 0) {
+        errors.value.secondJobHours = 'กรุณากรอกชั่วโมงทำงานเฉลี่ย';
+        hasError = true;
+      } else {
+        delete errors.value.secondJobHours;
+      }
+      if (secondJobTax.value === null || secondJobTax.value === undefined || secondJobTax.value < 0 || secondJobTax.value > 100) {
+        errors.value.secondJobTax = 'กรุณากรอกอัตราภาษี 0 - 100%';
+        hasError = true;
+      } else {
+        delete errors.value.secondJobTax;
+      }
+    } else {
+      delete errors.value.secondJobTitle;
+      delete errors.value.secondJobRate;
+      delete errors.value.secondJobHours;
+      delete errors.value.secondJobTax;
+    }
+
+    if (hasThirdJob.value) {
+      if (!thirdJobTitle.value || thirdJobTitle.value.trim() === '') {
+        errors.value.thirdJobTitle = 'กรุณากรอกชื่อตำแหน่งงานที่สาม';
+        hasError = true;
+      } else {
+        delete errors.value.thirdJobTitle;
+      }
+      if (thirdJobRate.value === null || thirdJobRate.value === undefined || thirdJobRate.value < 0) {
+        errors.value.thirdJobRate = 'ค่าจ้างต่อชั่วโมงต้องไม่ต่ำกว่า 0';
+        hasError = true;
+      } else {
+        delete errors.value.thirdJobRate;
+      }
+      if (thirdJobHours.value === null || thirdJobHours.value === undefined || thirdJobHours.value < 0) {
+        errors.value.thirdJobHours = 'กรุณากรอกชั่วโมงทำงานเฉลี่ย';
+        hasError = true;
+      } else {
+        delete errors.value.thirdJobHours;
+      }
+      if (thirdJobTax.value === null || thirdJobTax.value === undefined || thirdJobTax.value < 0 || thirdJobTax.value > 100) {
+        errors.value.thirdJobTax = 'กรุณากรอกอัตราภาษี 0 - 100%';
+        hasError = true;
+      } else {
+        delete errors.value.thirdJobTax;
+      }
+    } else {
+      delete errors.value.thirdJobTitle;
+      delete errors.value.thirdJobRate;
+      delete errors.value.thirdJobHours;
+      delete errors.value.thirdJobTax;
+    }
+
+    if (hasError) return false;
+  } else if (s === 3) {
+    let hasError = false;
+    if (!goalTitle.value || goalTitle.value.trim() === '') {
+      errors.value.goalTitle = 'กรุณากรอกชื่อเป้าหมายการออมเงิน';
+      hasError = true;
+    } else {
+      delete errors.value.goalTitle;
+    }
+    if (!goalAmount.value || goalAmount.value <= 0) {
+      errors.value.goalAmount = 'กรุณากรอกจำนวนเงินเป้าหมายให้มากกว่า 0';
+      hasError = true;
+    } else {
+      delete errors.value.goalAmount;
+    }
+    if (hasError) return false;
+  } else if (s === 4) {
+    if (initialCosts.value.length === 0) {
+      errors.value.costsGlobal = 'กรุณากรอกค่าใช้จ่ายโครงการอย่างน้อย 1 รายการ';
+      return false;
+    } else {
+      delete errors.value.costsGlobal;
+    }
+    
+    let hasError = false;
+    errors.value.costs = [];
+    for (let i = 0; i < initialCosts.value.length; i++) {
+      const cost = initialCosts.value[i];
+      errors.value.costs[i] = {};
+      if (!cost.name || cost.name.trim() === '') {
+        errors.value.costs[i].name = 'กรุณากรอกชื่อรายการ';
+        hasError = true;
+      }
+      if (cost.amount === null || cost.amount === undefined || cost.amount <= 0) {
+        errors.value.costs[i].amount = 'จำนวนเงินต้องมากกว่า 0';
+        hasError = true;
+      }
+    }
+    if (hasError) return false;
+    else delete errors.value.costs;
+  } else if (s === 5) {
+    let hasError = false;
+    if (!projectStartDate.value) {
+      errors.value.projectStartDate = 'กรุณาเลือกวันเริ่มโครงการ';
+      hasError = true;
+    } else {
+      delete errors.value.projectStartDate;
+    }
+    if (!projectEndDate.value) {
+      errors.value.projectEndDate = 'กรุณาเลือกวันจบโครงการ';
+      hasError = true;
+    } else {
+      delete errors.value.projectEndDate;
+    }
+    if (!nextPayday.value) {
+      errors.value.nextPayday = 'กรุณาเลือกวันรับเงินครั้งถัดไป';
+      hasError = true;
+    } else {
+      delete errors.value.nextPayday;
+    }
+    if (!nextRentDay.value) {
+      errors.value.nextRentDay = 'กรุณาเลือกวันจ่ายค่าเช่าครั้งถัดไป';
+      hasError = true;
+    } else {
+      delete errors.value.nextRentDay;
+    }
+    if (rentAmount.value === null || rentAmount.value === undefined || rentAmount.value < 0) {
+      errors.value.rentAmount = 'ค่าเช่าบ้านต้องไม่ต่ำกว่า 0';
+      hasError = true;
+    } else {
+      delete errors.value.rentAmount;
+    }
+    if (weeklyExpenseTarget.value === null || weeklyExpenseTarget.value === undefined || weeklyExpenseTarget.value < 0) {
+      errors.value.weeklyExpenseTarget = 'เป้าหมายค่าใช้จ่ายต้องไม่ต่ำกว่า 0';
+      hasError = true;
+    } else {
+      delete errors.value.weeklyExpenseTarget;
+    }
+
+    // Date boundary rules
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (nextPayday.value && nextPayday.value <= todayStr) {
+      errors.value.nextPayday = 'วันรับเงินถัดไปต้องมากกว่าวันปัจจุบัน';
+      hasError = true;
+    }
+    if (nextRentDay.value && nextRentDay.value <= todayStr) {
+      errors.value.nextRentDay = 'วันจ่ายค่าเช่าถัดไปต้องมากกว่าวันปัจจุบัน';
+      hasError = true;
+    }
+    if (projectStartDate.value && projectEndDate.value && projectStartDate.value >= projectEndDate.value) {
+      errors.value.projectEndDate = 'วันจบโครงการต้องเกิดหลังวันเริ่มโครงการ';
+      hasError = true;
+    }
+    const maxVal = maxLimit.value;
+    if (weeklyExpenseTarget.value !== null && (weeklyExpenseTarget.value < 0 || weeklyExpenseTarget.value > maxVal)) {
+      errors.value.weeklyExpenseTarget = `ต้องอยู่ในช่วง 0 ถึง ${maxVal.toLocaleString()}`;
+      hasError = true;
+    }
+
+    if (hasError) return false;
+  }
+  return true;
+};
+
+const nextStep = async () => {
+  const isValid = validateStep(step.value);
+  if (!isValid) return; // Stop if invalid, errors are displayed inline
+  if (step.value < 5) step.value++;
 };
 
 const fetchLiveRate = async () => {
@@ -378,16 +762,13 @@ const fetchLiveRate = async () => {
 };
 
 const finishSetup = async () => {
-  // Validate dates: must be strictly greater than today (i.e., tomorrow onwards)
-  const todayStr = new Date().toISOString().split('T')[0];
-  
-  if (nextPayday.value && nextPayday.value <= todayStr) {
-    await showAlert('วันรับเงินครั้งถัดไป ต้องมากกว่าวันปัจจุบัน (กรุณาเลือกตั้งแต่วันพรุ่งนี้เป็นต้นไป)', 'ข้อมูลไม่ถูกต้อง ⚠️');
-    return;
-  }
-  if (nextRentDay.value && nextRentDay.value <= todayStr) {
-    await showAlert('วันจ่ายค่าเช่าครั้งถัดไป ต้องมากกว่าวันปัจจุบัน (กรุณาเลือกตั้งแต่วันพรุ่งนี้เป็นต้นไป)', 'ข้อมูลไม่ถูกต้อง ⚠️');
-    return;
+  // Validate all steps 1 to 5 to make sure no step is bypassed
+  for (let s = 1; s <= 5; s++) {
+    const isValid = validateStep(s);
+    if (!isValid) {
+      step.value = s; // Switch wizard view to the invalid step tab
+      return;
+    }
   }
 
   isSubmitting.value = true;
@@ -405,7 +786,47 @@ const finishSetup = async () => {
       body: JSON.stringify({ rate: rate.value })
     });
 
-    // 2. Save Savings Goal
+    // 2. Save J-1 Jobs
+    const jobsToSave = [
+      {
+        id: 'job-main-' + Math.random().toString(36).substring(2, 6),
+        job_type: 'main',
+        title: mainJobTitle.value || 'งานหลัก',
+        hourly_rate: parseFloat(mainJobRate.value) || 0,
+        tax_rate: parseFloat(mainJobTax.value) || 0,
+        avg_hours_per_week: parseFloat(mainJobHours.value) || 0
+      }
+    ];
+
+    if (hasSecondJob.value) {
+      jobsToSave.push({
+        id: 'job-second-' + Math.random().toString(36).substring(2, 6),
+        job_type: 'second',
+        title: secondJobTitle.value || 'งานสอง',
+        hourly_rate: parseFloat(secondJobRate.value) || 0,
+        tax_rate: parseFloat(secondJobTax.value) || 0,
+        avg_hours_per_week: parseFloat(secondJobHours.value) || 0
+      });
+    }
+
+    if (hasThirdJob.value) {
+      jobsToSave.push({
+        id: 'job-third-' + Math.random().toString(36).substring(2, 6),
+        job_type: 'third',
+        title: thirdJobTitle.value || 'งานสาม',
+        hourly_rate: parseFloat(thirdJobRate.value) || 0,
+        tax_rate: parseFloat(thirdJobTax.value) || 0,
+        avg_hours_per_week: parseFloat(thirdJobHours.value) || 0
+      });
+    }
+
+    await fetch('/api/jobs', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ jobs: jobsToSave })
+    });
+
+    // 3. Save Savings Goal
     await fetch('/api/goals', {
       method: 'PUT',
       headers,
@@ -416,7 +837,7 @@ const finishSetup = async () => {
       })
     });
 
-    // 3. Save Project Costs
+    // 4. Save Project Costs
     const preparedCosts = initialCosts.value.map((cost, idx) => ({
       id: cost.id || `pc-${idx}-${Math.random().toString(36).substring(2, 6)}`,
       name: cost.name,
@@ -430,7 +851,15 @@ const finishSetup = async () => {
       body: JSON.stringify(preparedCosts)
     });
 
-    // 4. Save Countdowns
+    // Convert Weekly Expense Target and Rent Amount to USD if base is THB
+    let targetUSD = parseFloat(weeklyExpenseTarget.value) || 0;
+    let rentUSD = parseFloat(rentAmount.value) || 0;
+    if (activeCurrency.value === 'THB') {
+      targetUSD = parseFloat((targetUSD / rate.value).toFixed(2));
+      rentUSD = parseFloat((rentUSD / rate.value).toFixed(2));
+    }
+
+    // 5. Save Countdowns
     await fetch('/api/countdowns', {
       method: 'PUT',
       headers,
@@ -438,11 +867,14 @@ const finishSetup = async () => {
         nextPayday: nextPayday.value,
         payCycle: payCycle.value,
         nextRentDay: nextRentDay.value,
-        rentAmount: rentAmount.value
+        rentAmount: rentUSD,
+        weeklyExpenseTarget: targetUSD,
+        projectStartDate: projectStartDate.value,
+        projectEndDate: projectEndDate.value
       })
     });
 
-    // 5. Update user onboarding status to 1
+    // 6. Update user onboarding status to 1
     const onboardRes = await fetch('/api/auth/onboarded', {
       method: 'PUT',
       headers
