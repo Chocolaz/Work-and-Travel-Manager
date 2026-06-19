@@ -286,7 +286,7 @@
           v-for="week in weeklyHistory" 
           :key="week.key" 
           class="neo-card" 
-          style="padding: 10px; border-width: 2px; box-shadow: 1.5px 1.5px 0px #000; background-color: #ffffff; display: flex; flex-direction: column; gap: 6px;"
+          style="padding: 10px; border-width: 2px; box-shadow: 1.5px 1.5px 0px #000; background-color: #ffffff; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;"
         >
           <!-- Date range & Status Badge -->
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
