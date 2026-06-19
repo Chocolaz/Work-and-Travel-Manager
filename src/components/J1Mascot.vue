@@ -571,6 +571,8 @@ watch([happinessLevel, accessories], () => {
   text-align: left;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 90px;
+  overflow-y: auto;
 }
 .mascot-quote-box:hover {
   transform: translateY(-2px);
