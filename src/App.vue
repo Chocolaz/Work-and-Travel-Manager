@@ -3,6 +3,13 @@
     <!-- Unauthenticated View -->
     <LoginRegister v-if="!token" @auth-success="handleAuthSuccess" />
 
+    <!-- Loading View (No cache available yet) -->
+    <div v-else-if="isLoading && isCacheEmpty" class="neo-card" style="text-align: center; margin: 80px auto; max-width: 500px; padding: 40px; background-color: #FFE135; border-width: 4px; box-shadow: 8px 8px 0px #000; border-style: solid; border-color: #000;">
+      <h2 class="heading-font" style="margin-bottom: 20px;">กำลังโหลดข้อมูลการเงินของคุณ... ✈️</h2>
+      <div style="font-size: 3.5rem; margin: 20px 0; animation: celebrateBounce 0.6s infinite alternate ease-in-out; display: inline-block;">💼</div>
+      <p style="margin-top: 20px; font-weight: bold;">กรุณารอคู่หู J-1 ดึงข้อมูลจากคลาวด์สักครู่</p>
+    </div>
+
     <!-- Onboarding View -->
     <OnboardingWizard 
       v-else-if="onboarded !== 1" 
@@ -337,14 +344,34 @@ const activeCurrency = ref(localStorage.getItem('wat_active_currency') || 'USD')
 const currentView = ref('dashboard');
 
 // Database state from Server
-const exchangeRate = ref({ rate: 35.0, lastUpdated: '' });
-const projectCosts = ref([]);
-const transactions = ref([]);
+// Caching Helpers
+const getCachedJson = (key, defaultValue) => {
+  const cached = localStorage.getItem(key);
+  try {
+    return cached ? JSON.parse(cached) : defaultValue;
+  } catch (e) {
+    return defaultValue;
+  }
+};
+
+// Initialize from local cache to prevent flashing empty states on refresh
+const exchangeRate = ref(getCachedJson('wat_exchange_rate', { rate: 35.0, lastUpdated: '' }));
+const projectCosts = ref(getCachedJson('wat_project_costs', []));
+const transactions = ref(getCachedJson('wat_transactions', []));
 const newlyAddedTxId = ref('');
-const savingsGoal = ref({ title: 'Goal', targetAmount: 2000, currency: 'USD' });
-const countdowns = ref({ next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150 });
-const jobs = ref([]);
-const workLogs = ref([]);
+const savingsGoal = ref(getCachedJson('wat_savings_goal', { title: 'เงินออมเพื่อการท่องเที่ยว 🗽', targetAmount: 0.0, currency: 'USD' }));
+const countdowns = ref(getCachedJson('wat_countdowns', { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150 }));
+const jobs = ref(getCachedJson('wat_jobs', []));
+const workLogs = ref(getCachedJson('wat_work_logs', []));
+
+// Loading & Cache check states
+const isLoading = ref(token.value ? true : false);
+const isCacheEmpty = computed(() => {
+  return transactions.value.length === 0 && 
+         projectCosts.value.length === 0 && 
+         jobs.value.length === 0 && 
+         workLogs.value.length === 0;
+});
 
 // Custom Modal State
 const customModal = ref({
@@ -438,6 +465,7 @@ const handleAuthSuccess = (authData) => {
   localStorage.setItem('wat_username', authData.username);
   localStorage.setItem('wat_onboarded', authData.onboarded ? '1' : '0');
 
+  isLoading.value = true;
   fetchDashboardData();
 };
 
@@ -450,6 +478,15 @@ const logout = () => {
   localStorage.removeItem('wat_user_id');
   localStorage.removeItem('wat_username');
   localStorage.removeItem('wat_onboarded');
+  
+  // Clear cached database states
+  localStorage.removeItem('wat_exchange_rate');
+  localStorage.removeItem('wat_project_costs');
+  localStorage.removeItem('wat_transactions');
+  localStorage.removeItem('wat_savings_goal');
+  localStorage.removeItem('wat_countdowns');
+  localStorage.removeItem('wat_jobs');
+  localStorage.removeItem('wat_work_logs');
 };
 
 const handleChangeCurrency = (currency) => {
@@ -466,6 +503,7 @@ const handleOnboardingComplete = () => {
 // Fetch Dashboard Data from Backend API
 const fetchDashboardData = async () => {
   if (!token.value) return;
+  isLoading.value = true;
   try {
     const data = await apiCall('/api/data');
     exchangeRate.value = data.exchangeRate;
@@ -479,6 +517,8 @@ const fetchDashboardData = async () => {
     localStorage.setItem('wat_onboarded', data.onboarded ? '1' : '0');
   } catch (err) {
     console.error('Failed to load dashboard data:', err);
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -759,6 +799,15 @@ watch(roi, (newRoi) => {
     localStorage.removeItem('wat_celebrated_breakeven');
   }
 });
+
+// Watch database states to automatically save changes to local storage cache
+watch(exchangeRate, (newVal) => localStorage.setItem('wat_exchange_rate', JSON.stringify(newVal)), { deep: true });
+watch(projectCosts, (newVal) => localStorage.setItem('wat_project_costs', JSON.stringify(newVal)), { deep: true });
+watch(transactions, (newVal) => localStorage.setItem('wat_transactions', JSON.stringify(newVal)), { deep: true });
+watch(savingsGoal, (newVal) => localStorage.setItem('wat_savings_goal', JSON.stringify(newVal)), { deep: true });
+watch(countdowns, (newVal) => localStorage.setItem('wat_countdowns', JSON.stringify(newVal)), { deep: true });
+watch(jobs, (newVal) => localStorage.setItem('wat_jobs', JSON.stringify(newVal)), { deep: true });
+watch(workLogs, (newVal) => localStorage.setItem('wat_work_logs', JSON.stringify(newVal)), { deep: true });
 
 // Lifecycle
 onMounted(() => {
