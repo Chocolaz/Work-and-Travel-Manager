@@ -881,6 +881,7 @@ const finishSetup = async () => {
         nextPayday: nextPayday.value,
         payCycle: payCycle.value,
         nextRentDay: nextRentDay.value,
+        rentCycle: 'weekly',
         rentAmount: rentUSD,
         weeklyExpenseTarget: targetUSD,
         projectStartDate: projectStartDate.value,

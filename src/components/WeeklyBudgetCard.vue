@@ -248,6 +248,7 @@ const saveSettings = async () => {
     nextPayday: props.countdowns.next_payday,
     payCycle: props.countdowns.pay_cycle,
     nextRentDay: props.countdowns.next_rent_day,
+    rentCycle: props.countdowns.rent_cycle,
     rentAmount: props.countdowns.rent_amount,
     weeklyExpenseTarget: targetInUSD,
     projectStartDate: props.countdowns.project_start_date,

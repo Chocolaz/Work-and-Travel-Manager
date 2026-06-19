@@ -327,7 +327,11 @@ const convertUsdToActive = (amountUsd) => {
 
 // Rent per week in active currency
 const rentAmountActive = computed(() => {
-  return convertUsdToActive(props.countdowns?.rent_amount || 0);
+  const baseAmount = convertUsdToActive(props.countdowns?.rent_amount || 0);
+  const cycle = props.countdowns?.rent_cycle || 'weekly';
+  if (cycle === 'bi-weekly') return baseAmount / 2;
+  if (cycle === 'monthly') return baseAmount / 4;
+  return baseAmount;
 });
 
 // Target weekly expense set by user in active currency

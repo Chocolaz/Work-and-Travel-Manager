@@ -107,7 +107,8 @@ const initDb = async () => {
         rent_amount DOUBLE PRECISION,
         weekly_expense_target DOUBLE PRECISION NOT NULL DEFAULT 0.0,
         project_start_date TEXT DEFAULT '',
-        project_end_date TEXT DEFAULT ''
+        project_end_date TEXT DEFAULT '',
+        rent_cycle TEXT DEFAULT 'weekly'
       );
 
       CREATE TABLE IF NOT EXISTS jobs (
@@ -135,6 +136,7 @@ const initDb = async () => {
     // Schema migrations for Google Login support
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;');
     await client.query('ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;');
+    await client.query('ALTER TABLE countdowns ADD COLUMN IF NOT EXISTS rent_cycle TEXT DEFAULT \'weekly\';');
 
     console.log('Database tables successfully initialized.');
   } catch (err) {
@@ -165,6 +167,27 @@ function authenticateToken(req, res, next) {
   } catch (err) {
     res.status(403).json({ error: 'Invalid token.' });
   }
+}
+// Helper to roll date forward based on payment/rent cycle
+function rollDateForward(dateStr, cycle) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let target = new Date(dateStr);
+  if (isNaN(target.getTime())) return dateStr;
+  
+  while (target < today) {
+    if (cycle === 'weekly') {
+      target.setDate(target.getDate() + 7);
+    } else if (cycle === 'bi-weekly') {
+      target.setDate(target.getDate() + 14);
+    } else if (cycle === 'monthly') {
+      target.setMonth(target.getMonth() + 1);
+    } else {
+      break; // Safety fallback
+    }
+  }
+  return target.toISOString().split('T')[0];
 }
 
 // Create express Router to mount on both /api and / to handle stripped prefixes
@@ -309,11 +332,28 @@ router.get('/data', authenticateToken, async (req, res) => {
       savingsGoal.target_amount = parseFloat(savingsGoal.target_amount);
     }
 
-    const countdownResult = await pool.query('SELECT next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date FROM countdowns WHERE user_id = $1', [userId]);
+    const countdownResult = await pool.query('SELECT next_payday, pay_cycle, next_rent_day, rent_cycle, rent_amount, weekly_expense_target, project_start_date, project_end_date FROM countdowns WHERE user_id = $1', [userId]);
     let countdowns = countdownResult.rows[0];
     if (!countdowns) {
-      countdowns = { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150.0, weekly_expense_target: 0.0, project_start_date: '', project_end_date: '' };
+      countdowns = { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_cycle: 'weekly', rent_amount: 150.0, weekly_expense_target: 0.0, project_start_date: '', project_end_date: '' };
     } else {
+      countdowns.rent_cycle = countdowns.rent_cycle || 'weekly';
+
+      // Auto-rollover if dates are in the past
+      const originalPayday = countdowns.next_payday;
+      const originalRentDay = countdowns.next_rent_day;
+      const rolledPayday = rollDateForward(originalPayday, countdowns.pay_cycle || 'weekly');
+      const rolledRentDay = rollDateForward(originalRentDay, countdowns.rent_cycle || 'weekly');
+      
+      if (rolledPayday !== originalPayday || rolledRentDay !== originalRentDay) {
+        countdowns.next_payday = rolledPayday;
+        countdowns.next_rent_day = rolledRentDay;
+        await pool.query(
+          'UPDATE countdowns SET next_payday = $1, next_rent_day = $2 WHERE user_id = $3',
+          [rolledPayday, rolledRentDay, userId]
+        );
+      }
+
       countdowns.rent_amount = parseFloat(countdowns.rent_amount) || 0;
       countdowns.weekly_expense_target = parseFloat(countdowns.weekly_expense_target) || 0;
       countdowns.project_start_date = countdowns.project_start_date || '';
@@ -517,41 +557,44 @@ router.put('/goals', authenticateToken, async (req, res) => {
 
 // Update Countdowns Settings
 router.put('/countdowns', authenticateToken, async (req, res) => {
-  const { nextPayday, payCycle, nextRentDay, rentAmount, weeklyExpenseTarget, projectStartDate, projectEndDate } = req.body;
-  const userId = req.userId;
-
-  try {
-    await pool.query(`
-      INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT(user_id) DO UPDATE SET
-        next_payday = EXCLUDED.next_payday,
-        pay_cycle = EXCLUDED.pay_cycle,
-        next_rent_day = EXCLUDED.next_rent_day,
-        rent_amount = EXCLUDED.rent_amount,
-        weekly_expense_target = EXCLUDED.weekly_expense_target,
-        project_start_date = EXCLUDED.project_start_date,
-        project_end_date = EXCLUDED.project_end_date
-    `, [
-      userId,
-      nextPayday || '',
-      payCycle || 'weekly',
-      nextRentDay || '',
-      rentAmount !== undefined ? parseFloat(rentAmount) : 150,
-      weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
-      projectStartDate || '',
-      projectEndDate || ''
-    ]);
-
-    res.json({
-      next_payday: nextPayday || '',
-      pay_cycle: payCycle || 'weekly',
-      next_rent_day: nextRentDay || '',
-      rent_amount: rentAmount !== undefined ? parseFloat(rentAmount) : 150,
-      weekly_expense_target: weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
-      project_start_date: projectStartDate || '',
-      project_end_date: projectEndDate || ''
-    });
+    const { nextPayday, payCycle, nextRentDay, rentCycle, rentAmount, weeklyExpenseTarget, projectStartDate, projectEndDate } = req.body;
+    const userId = req.userId;
+  
+    try {
+      await pool.query(`
+        INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_cycle, rent_amount, weekly_expense_target, project_start_date, project_end_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT(user_id) DO UPDATE SET
+          next_payday = EXCLUDED.next_payday,
+          pay_cycle = EXCLUDED.pay_cycle,
+          next_rent_day = EXCLUDED.next_rent_day,
+          rent_cycle = EXCLUDED.rent_cycle,
+          rent_amount = EXCLUDED.rent_amount,
+          weekly_expense_target = EXCLUDED.weekly_expense_target,
+          project_start_date = EXCLUDED.project_start_date,
+          project_end_date = EXCLUDED.project_end_date
+      `, [
+        userId,
+        nextPayday || '',
+        payCycle || 'weekly',
+        nextRentDay || '',
+        rentCycle || 'weekly',
+        rentAmount !== undefined ? parseFloat(rentAmount) : 150,
+        weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
+        projectStartDate || '',
+        projectEndDate || ''
+      ]);
+  
+      res.json({
+        next_payday: nextPayday || '',
+        pay_cycle: payCycle || 'weekly',
+        next_rent_day: nextRentDay || '',
+        rent_cycle: rentCycle || 'weekly',
+        rent_amount: rentAmount !== undefined ? parseFloat(rentAmount) : 150,
+        weekly_expense_target: weeklyExpenseTarget !== undefined ? parseFloat(weeklyExpenseTarget) : 0,
+        project_start_date: projectStartDate || '',
+        project_end_date: projectEndDate || ''
+      });
   } catch (err) {
     console.error('Update countdowns failed:', err);
     res.status(500).json({ error: 'Failed to update countdown settings.' });

@@ -44,9 +44,17 @@
             <input type="date" v-model="editNextRentDay" :min="minDate" style="padding: 6px 10px; border-width: 2px;" />
           </div>
           <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.65rem;">ค่าเช่าบ้านรายสัปดาห์ ({{ activeCurrency }})</label>
-            <input type="number" v-model.number="editRentAmount" min="0" style="padding: 6px 10px; border-width: 2px;" />
+            <label style="font-size: 0.65rem;">รอบการชำระค่าเช่า</label>
+            <select v-model="editRentCycle" style="padding: 6px 10px; border-width: 2px;">
+              <option value="weekly">ทุกสัปดาห์ (Weekly)</option>
+              <option value="bi-weekly">ทุก 2 สัปดาห์ (Bi-weekly)</option>
+              <option value="monthly">รายเดือน (Monthly)</option>
+            </select>
           </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.65rem;">จำนวนค่าเช่าบ้านต่อรอบชำระ ({{ activeCurrency }})</label>
+          <input type="number" v-model.number="editRentAmount" min="0" style="padding: 6px 10px; border-width: 2px; width: 100%; box-sizing: border-box;" />
         </div>
 
 
@@ -94,7 +102,7 @@
         <div v-else style="color: white;">
           <div class="countdown-num">{{ rentStatus.timeText }}</div>
           <div style="font-size: 0.7rem; font-weight: 700; opacity: 0.8;">
-            ค่าเช่า: {{ formatCurrency(rentAmountActive) }} วันที่ {{ countdowns.next_rent_day || 'ยังไม่ระบุ' }}
+            ค่าเช่า: {{ formatCurrency(rentAmountActive) }} / {{ rentCycleText }} วันที่ {{ countdowns.next_rent_day || 'ยังไม่ระบุ' }}
           </div>
         </div>
       </div>
@@ -145,6 +153,7 @@ const isEditing = ref(false);
 const editNextPayday = ref(props.countdowns.next_payday || '');
 const editPayCycle = ref(props.countdowns.pay_cycle || 'weekly');
 const editNextRentDay = ref(props.countdowns.next_rent_day || '');
+const editRentCycle = ref(props.countdowns.rent_cycle || 'weekly');
 const editRentAmount = ref(150);
 const editProjectStartDate = ref(props.countdowns.project_start_date || '');
 const editProjectEndDate = ref(props.countdowns.project_end_date || '');
@@ -174,6 +183,7 @@ watch(isEditing, (newVal) => {
     editNextPayday.value = props.countdowns.next_payday || '';
     editPayCycle.value = props.countdowns.pay_cycle || 'weekly';
     editNextRentDay.value = props.countdowns.next_rent_day || '';
+    editRentCycle.value = props.countdowns.rent_cycle || 'weekly';
     editProjectStartDate.value = props.countdowns.project_start_date || '';
     editProjectEndDate.value = props.countdowns.project_end_date || '';
     syncEditRentAmount();
@@ -185,6 +195,7 @@ watch(() => props.countdowns, (newVal) => {
     editNextPayday.value = newVal.next_payday || '';
     editPayCycle.value = newVal.pay_cycle || 'weekly';
     editNextRentDay.value = newVal.next_rent_day || '';
+    editRentCycle.value = newVal.rent_cycle || 'weekly';
     editProjectStartDate.value = newVal.project_start_date || '';
     editProjectEndDate.value = newVal.project_end_date || '';
     syncEditRentAmount();
@@ -209,6 +220,14 @@ const rentAmountActive = computed(() => {
   if (props.activeCurrency === 'USD') return amount;
   const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
   return amount * rate;
+});
+
+const rentCycleText = computed(() => {
+  const cycle = props.countdowns?.rent_cycle || 'weekly';
+  if (cycle === 'weekly') return 'สัปดาห์';
+  if (cycle === 'bi-weekly') return '2 สัปดาห์';
+  if (cycle === 'monthly') return 'เดือน';
+  return cycle;
 });
 
 // Ticking logic
@@ -382,6 +401,7 @@ const saveSettings = async () => {
     nextPayday: editNextPayday.value,
     payCycle: editPayCycle.value,
     nextRentDay: editNextRentDay.value,
+    rentCycle: editRentCycle.value,
     rentAmount: rentUSD,
     weeklyExpenseTarget: props.countdowns.weekly_expense_target || 0,
     projectStartDate: editProjectStartDate.value,

@@ -360,7 +360,7 @@ const projectCosts = ref(getCachedJson('wat_project_costs', []));
 const transactions = ref(getCachedJson('wat_transactions', []));
 const newlyAddedTxId = ref('');
 const savingsGoal = ref(getCachedJson('wat_savings_goal', { title: 'เงินออมเพื่อการท่องเที่ยว 🗽', targetAmount: 0.0, currency: 'USD' }));
-const countdowns = ref(getCachedJson('wat_countdowns', { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_amount: 150 }));
+const countdowns = ref(getCachedJson('wat_countdowns', { next_payday: '', pay_cycle: 'weekly', next_rent_day: '', rent_cycle: 'weekly', rent_amount: 150 }));
 const jobs = ref(getCachedJson('wat_jobs', []));
 const workLogs = ref(getCachedJson('wat_work_logs', []));
 
