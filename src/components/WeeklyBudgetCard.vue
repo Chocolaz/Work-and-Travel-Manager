@@ -143,6 +143,9 @@
         <div style="font-weight: 700; font-size: 0.72rem; color: var(--color-muted);">
           ค่าเฉลี่ยรายสัปดาห์ (ประวัติ): {{ formatCurrency(actualWeeklyExpenseTotal) }}
         </div>
+        <div style="font-weight: 700; font-size: 0.68rem; color: #7f8c8d; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+          <span>* ไม่รวมค่าเช่าบ้าน 🏠 และเงินมัดจำ 🔑</span>
+        </div>
 
         <div style="font-size: 0.72rem; font-weight: 700; color: var(--color-muted); margin-top: 4px;">
           <template v-if="countdowns.weekly_expense_target <= 0">
@@ -170,6 +173,7 @@
       <!-- Period guidance alert -->
       <div v-if="formattedProjectPeriodText" style="font-size: 0.7rem; font-weight: 700; color: #4b5563; background-color: #FFF9C4; border: 2px solid #000; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; box-shadow: 1.5px 1.5px 0px #000; line-height: 1.3;">
         ℹ️ ประวัตินี้คำนวณ<strong>เฉพาะรายการใช้จ่ายภายในระยะเวลาโครงการ</strong>: <span style="text-decoration: underline;">{{ formattedProjectPeriodText }}</span>
+        <div style="margin-top: 4px; color: #6b7280; font-size: 0.65rem;">* ไม่รวมค่าเช่าบ้าน 🏠 และเงินมัดจำ 🔑 ในผลรวมรายสัปดาห์</div>
       </div>
 
       <div v-if="weeklyHistory.length === 0" style="text-align: center; padding: 24px 8px; color: var(--color-muted); font-weight: 700; font-size: 0.8rem;">
@@ -318,7 +322,7 @@ const weeklyHistory = computed(() => {
   const groups = {};
 
   props.transactions.forEach(tx => {
-    if (tx.type !== 'expense') return;
+    if (tx.type !== 'expense' || tx.category === 'rent' || tx.category === 'deposit') return;
 
     const txDate = new Date(tx.date + 'T00:00:00');
     if (isNaN(txDate.getTime())) return;

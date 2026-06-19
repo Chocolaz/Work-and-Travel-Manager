@@ -634,9 +634,9 @@ const dailyExpenses = computed(() => {
   }, 0);
 });
 
-// Calculate actual weekly variable expense based on the last 4 weeks
+// Calculate actual weekly variable expense based on the last 4 weeks (excluding rent and deposit)
 const actualWeeklyExpenseTotal = computed(() => {
-  const expenseTx = transactions.value.filter(t => t.type === 'expense');
+  const expenseTx = transactions.value.filter(t => t.type === 'expense' && t.category !== 'rent' && t.category !== 'deposit');
   if (expenseTx.length === 0) return 0;
   
   const now = new Date();
@@ -651,7 +651,13 @@ const actualWeeklyExpenseTotal = computed(() => {
     const minDate = new Date(Math.min(...dates));
     const diffDays = Math.ceil(Math.max(1, (now - minDate) / (1000 * 60 * 60 * 24)));
     const elapsedWeeks = Math.max(1, diffDays / 7);
-    return dailyExpenses.value / elapsedWeeks;
+    
+    // Sum variable expenses in history
+    const totalAll = expenseTx.reduce((sum, tx) => {
+      const amt = parseFloat(tx.amount) || 0;
+      return sum + convertToActiveCurrency(amt, tx.currency);
+    }, 0);
+    return totalAll / elapsedWeeks;
   }
   
   const totalRecent = recentTx.reduce((sum, tx) => {
@@ -683,12 +689,12 @@ const getCurrentWeekRange = () => {
   return { monday, sunday };
 };
 
-// Calculate actual expenses spent strictly within this calendar week (Mon - Sun)
+// Calculate actual expenses spent strictly within this calendar week (Mon - Sun), excluding rent and deposit
 const currentWeekExpenseTotal = computed(() => {
   const { monday, sunday } = getCurrentWeekRange();
   
   return transactions.value.reduce((sum, tx) => {
-    if (tx.type === 'expense') {
+    if (tx.type === 'expense' && tx.category !== 'rent' && tx.category !== 'deposit') {
       const txDate = new Date(tx.date + 'T00:00:00');
       if (txDate >= monday && txDate <= sunday) {
         const amt = parseFloat(tx.amount) || 0;
