@@ -162,7 +162,7 @@
     </div>
 
     <!-- Weekly History Display Mode -->
-    <div v-else class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #E8F5E9; max-height: 380px; display: flex; flex-direction: column;">
+    <div v-else class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #E8F5E9; max-height: 500px; display: flex; flex-direction: column;">
       <h3 class="heading-font" style="font-size: 0.85rem; margin-bottom: 12px; color: black; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px;">
         <span>📊 ประวัติงบประจำสัปดาห์</span>
         <span style="font-size: 0.65rem; background-color: var(--color-accent); color: black; padding: 2px 6px; border: 1.5px solid #000; border-radius: 4px; font-weight: 800;">
@@ -174,6 +174,107 @@
       <div v-if="formattedProjectPeriodText" style="font-size: 0.7rem; font-weight: 700; color: #4b5563; background-color: #FFF9C4; border: 2px solid #000; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; box-shadow: 1.5px 1.5px 0px #000; line-height: 1.3;">
         ℹ️ ประวัตินี้คำนวณ<strong>เฉพาะรายการใช้จ่ายภายในระยะเวลาโครงการ</strong>: <span style="text-decoration: underline;">{{ formattedProjectPeriodText }}</span>
         <div style="margin-top: 4px; color: #6b7280; font-size: 0.65rem;">* ไม่รวมค่าเช่าบ้าน 🏠 และเงินมัดจำ 🔑 ในผลรวมรายสัปดาห์</div>
+      </div>
+
+      <!-- Spending Chart Box -->
+      <div v-if="weeklyHistory.length > 0" style="position: relative; border: 2.5px solid #000; box-shadow: 3px 3px 0px #000; background-color: #ffffff; padding: 8px; margin-bottom: 12px; border-radius: 4px;">
+        <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--color-muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span>📈 แนวโน้มการใช้จ่ายรายสัปดาห์</span>
+          <span style="font-size: 0.62rem; color: #555;">(ชี้ที่แท่งเพื่อดูรายละเอียด)</span>
+        </div>
+
+        <svg viewBox="0 0 500 200" width="100%" height="160" style="display: block; overflow: visible;">
+          <!-- Grid lines -->
+          <line x1="10" y1="20" x2="490" y2="20" stroke="#f0f0f0" stroke-width="1.5" />
+          <line x1="10" y1="95" x2="490" y2="95" stroke="#f0f0f0" stroke-width="1.5" />
+          <line x1="10" y1="170" x2="490" y2="170" stroke="#000000" stroke-width="2.5" />
+
+          <!-- Y-axis max label (top-left) -->
+          <text x="12" y="16" font-size="9" font-weight="900" fill="#7f8c8d" font-family="var(--font-display)">
+            {{ formatCurrency(chartMaxVal) }}
+          </text>
+
+          <!-- Budget Target dashed line -->
+          <line 
+            v-if="weeklyExpenseTargetConverted > 0" 
+            x1="10" 
+            :y1="targetLineY" 
+            x2="490" 
+            :y2="targetLineY" 
+            stroke="var(--color-error)" 
+            stroke-width="2" 
+            stroke-dasharray="4,4" 
+          />
+          <text 
+            v-if="weeklyExpenseTargetConverted > 0" 
+            x="485" 
+            :y="targetLineY - 4" 
+            text-anchor="end" 
+            font-size="8" 
+            font-weight="900" 
+            fill="var(--color-error)"
+            font-family="var(--font-display)"
+          >
+            งบเป้าหมาย ({{ formatCurrency(weeklyExpenseTargetConverted) }})
+          </text>
+
+          <!-- Bars -->
+          <g v-for="bar in chartBars" :key="bar.key">
+            <!-- Shadow for Brutalism effect -->
+            <rect 
+              :x="bar.x + 2" 
+              :y="bar.y + 2" 
+              :width="bar.width" 
+              :height="bar.height" 
+              fill="#000000" 
+              rx="2"
+            />
+            <!-- Main Bar -->
+            <rect 
+              :x="bar.x" 
+              :y="bar.y" 
+              :width="bar.width" 
+              :height="bar.height" 
+              :fill="bar.color" 
+              stroke="#000000" 
+              stroke-width="2" 
+              rx="2"
+              style="cursor: pointer; transition: transform 0.1s ease, fill 0.1s ease;"
+              @mouseover="hoveredWeek = bar"
+              @mouseleave="hoveredWeek = null"
+              @touchstart="hoveredWeek = bar"
+            />
+            
+            <!-- X-axis week label -->
+            <text 
+              :x="bar.x + bar.width / 2" 
+              y="185" 
+              text-anchor="middle" 
+              font-size="8.5" 
+              font-weight="900" 
+              fill="#2c3e50"
+              font-family="var(--font-display)"
+            >
+              {{ bar.xLabel }}
+            </text>
+          </g>
+        </svg>
+
+        <!-- Chart Tooltip Card inside Chart Box -->
+        <div 
+          v-if="hoveredWeek" 
+          class="neo-card" 
+          style="position: absolute; top: 6px; right: 6px; padding: 6px 10px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #ffffff; z-index: 10; font-size: 0.68rem; font-weight: 800; width: 150px; line-height: 1.35; pointer-events: none;"
+        >
+          <div style="font-size: 0.7rem; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 3px; font-weight: 900;">
+            📅 {{ hoveredWeek.rangeText }}
+          </div>
+          <div>ใช้: <span :style="{ color: hoveredWeek.isExceeded ? 'var(--color-error)' : '#2E7D32' }">{{ formatCurrency(hoveredWeek.spent) }}</span></div>
+          <div :style="{ color: hoveredWeek.isExceeded ? 'var(--color-error)' : '#2E7D32' }">
+            {{ hoveredWeek.isExceeded ? 'เกินงบ: ' : 'เหลือ: ' }} <strong>{{ formatCurrency(Math.abs(hoveredWeek.remaining)) }}</strong>
+          </div>
+          <div style="color: var(--color-muted); font-size: 0.58rem; margin-top: 1px;">({{ hoveredWeek.txCount }} รายการ)</div>
+        </div>
       </div>
 
       <div v-if="weeklyHistory.length === 0" style="text-align: center; padding: 24px 8px; color: var(--color-muted); font-weight: 700; font-size: 0.8rem;">
@@ -390,6 +491,64 @@ const weeklyHistory = computed(() => {
   });
 
   return historyList.sort((a, b) => b.monday - a.monday);
+});
+
+const hoveredWeek = ref(null);
+
+const weeklyHistoryChartData = computed(() => {
+  // Sort ascending (oldest first) for left-to-right timeline
+  return weeklyHistory.value.slice().reverse();
+});
+
+const chartMaxVal = computed(() => {
+  const target = weeklyExpenseTargetConverted.value;
+  const spends = weeklyHistoryChartData.value.map(w => w.spent);
+  const maxSpent = spends.length > 0 ? Math.max(...spends) : 0;
+  return Math.max(target, maxSpent, 10) * 1.15;
+});
+
+const getSvgY = (value) => {
+  const max = chartMaxVal.value;
+  if (max <= 0) return 170;
+  const heightRatio = value / max;
+  return 170 - (heightRatio * 150);
+};
+
+const targetLineY = computed(() => {
+  return getSvgY(weeklyExpenseTargetConverted.value);
+});
+
+const chartBars = computed(() => {
+  const data = weeklyHistoryChartData.value;
+  const N = data.length;
+  if (N === 0) return [];
+  
+  const chartWidth = 480;
+  const barWidth = Math.max(12, Math.min(50, (chartWidth / N) * 0.6));
+  const totalBarWidth = barWidth * N;
+  const remainingWidth = chartWidth - totalBarWidth;
+  const spacing = remainingWidth / (N + 1);
+
+  return data.map((week, i) => {
+    const x = 10 + spacing + i * (barWidth + spacing);
+    const y = getSvgY(week.spent);
+    const height = 170 - y;
+    const isExceeded = week.spent > week.target;
+    const color = isExceeded ? '#FFB3C6' : '#B9F7CA';
+
+    const startDt = new Date(week.monday);
+    const xLabel = startDt.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+
+    return {
+      ...week,
+      x,
+      y,
+      width: barWidth,
+      height,
+      color,
+      xLabel
+    };
+  });
 });
 
 // Sync edits when settings is opened or when props update
