@@ -102,6 +102,7 @@ const handleSubmit = async () => {
       token: data.token,
       userId: data.userId,
       username: data.username,
+      onboarded: data.onboarded,
     });
   } catch (err) {
     error.value = err.message;
@@ -130,6 +131,7 @@ const handleCredentialResponse = async (response) => {
       token: data.token,
       userId: data.userId,
       username: data.username,
+      onboarded: data.onboarded,
     });
   } catch (err) {
     error.value = err.message;
