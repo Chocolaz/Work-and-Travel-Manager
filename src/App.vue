@@ -500,6 +500,65 @@ const handleOnboardingComplete = () => {
   fetchDashboardData();
 };
 
+// Helper to roll date forward on frontend
+const rollDateForwardClient = (dateStr, cycle) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let target = new Date(dateStr);
+  if (isNaN(target.getTime())) return dateStr;
+  
+  while (target < today) {
+    if (cycle === 'weekly') {
+      target.setDate(target.getDate() + 7);
+    } else if (cycle === 'bi-weekly') {
+      target.setDate(target.getDate() + 14);
+    } else if (cycle === 'monthly') {
+      target.setMonth(target.getMonth() + 1);
+    } else {
+      break;
+    }
+  }
+  return target.toISOString().split('T')[0];
+};
+
+const checkAndRolloverCountdowns = async () => {
+  const c = countdowns.value;
+  if (!c) return;
+  
+  const payday = c.next_payday || c.nextPayday;
+  const rentDay = c.next_rent_day || c.nextRentDay;
+  const payCycle = c.pay_cycle || c.payCycle || 'weekly';
+  const rentCycle = c.rent_cycle || c.rentCycle || 'weekly';
+  
+  const rolledPayday = rollDateForwardClient(payday, payCycle);
+  const rolledRentDay = rollDateForwardClient(rentDay, rentCycle);
+  
+  if (rolledPayday !== payday || rolledRentDay !== rentDay) {
+    if (c.next_payday !== undefined) c.next_payday = rolledPayday;
+    if (c.nextPayday !== undefined) c.nextPayday = rolledPayday;
+    if (c.next_rent_day !== undefined) c.next_rent_day = rolledRentDay;
+    if (c.nextRentDay !== undefined) c.nextRentDay = rolledRentDay;
+    
+    try {
+      const payload = {
+        nextPayday: rolledPayday,
+        payCycle: payCycle,
+        nextRentDay: rolledRentDay,
+        rentCycle: rentCycle,
+        rentAmount: c.rent_amount !== undefined ? c.rent_amount : c.rentAmount,
+        weeklyExpenseTarget: c.weekly_expense_target !== undefined ? c.weekly_expense_target : c.weeklyExpenseTarget,
+        projectStartDate: c.project_start_date !== undefined ? c.project_start_date : c.projectStartDate,
+        projectEndDate: c.project_end_date !== undefined ? c.project_end_date : c.projectEndDate
+      };
+      const resultCountdowns = await apiCall('/api/countdowns', 'PUT', payload);
+      countdowns.value = resultCountdowns;
+    } catch (e) {
+      console.error('Failed to auto-rollover countdowns:', e);
+    }
+  }
+};
+
 // Fetch Dashboard Data from Backend API
 const fetchDashboardData = async () => {
   if (!token.value) return;
@@ -515,6 +574,9 @@ const fetchDashboardData = async () => {
     jobs.value = data.jobs || [];
     workLogs.value = data.workLogs || [];
     localStorage.setItem('wat_onboarded', data.onboarded ? '1' : '0');
+    
+    // Proactively check and rollover past dates if returned by server
+    await checkAndRolloverCountdowns();
   } catch (err) {
     console.error('Failed to load dashboard data:', err);
   } finally {
@@ -813,6 +875,7 @@ watch(workLogs, (newVal) => localStorage.setItem('wat_work_logs', JSON.stringify
 onMounted(() => {
   if (token.value) {
     fetchDashboardData();
+    checkAndRolloverCountdowns();
   }
 });
 </script>
