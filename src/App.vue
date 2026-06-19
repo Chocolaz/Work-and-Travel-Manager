@@ -111,6 +111,8 @@
               :exchange-rate="exchangeRate"
               :active-currency="activeCurrency"
               :actual-weekly-expense-total="actualWeeklyExpenseTotal"
+              :current-week-expense-total="currentWeekExpenseTotal"
+              :current-week-range-text="currentWeekRangeText"
               @update-countdowns="handleUpdateCountdowns"
             />
           </div>
@@ -662,6 +664,45 @@ const actualWeeklyExpenseTotal = computed(() => {
   const elapsedWeeks = Math.min(4, Math.max(1, diffDays / 7));
   
   return totalRecent / elapsedWeeks;
+});
+
+// Helper to determine the current calendar week's start (Monday) and end (Sunday) dates
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = (day === 0 ? -6 : 1 - day); // Mon = 1, Sun = 0
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  
+  return { monday, sunday };
+};
+
+// Calculate actual expenses spent strictly within this calendar week (Mon - Sun)
+const currentWeekExpenseTotal = computed(() => {
+  const { monday, sunday } = getCurrentWeekRange();
+  
+  return transactions.value.reduce((sum, tx) => {
+    if (tx.type === 'expense') {
+      const txDate = new Date(tx.date + 'T00:00:00');
+      if (txDate >= monday && txDate <= sunday) {
+        const amt = parseFloat(tx.amount) || 0;
+        return sum + convertToActiveCurrency(amt, tx.currency);
+      }
+    }
+    return sum;
+  }, 0);
+});
+
+// Format the date range text for the current week
+const currentWeekRangeText = computed(() => {
+  const { monday, sunday } = getCurrentWeekRange();
+  const fmt = (dt) => dt.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+  return `${fmt(monday)} – ${fmt(sunday)}`;
 });
 
 const totalExpenses = computed(() => {

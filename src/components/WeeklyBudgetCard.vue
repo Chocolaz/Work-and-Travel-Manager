@@ -59,6 +59,9 @@
           <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--color-muted);">
             เป้าหมายงบประมาณสัปดาห์นี้
           </div>
+          <div style="font-size: 0.72rem; font-weight: 800; color: #555; margin-top: 2px;">
+            ({{ currentWeekRangeText }})
+          </div>
           <div style="font-size: 1.8rem; font-family: var(--font-display); font-weight: 900; margin: 6px 0; color: black;">
             <template v-if="countdowns.weekly_expense_target > 0">
               {{ formatCurrency(weeklyExpenseTargetConverted) }}
@@ -89,22 +92,22 @@
           class="neo-progress-bar" 
           :style="{ 
             width: `${Math.min(100, progressPercent)}%`,
-            backgroundColor: actualWeeklyExpenseTotal <= weeklyExpenseTargetConverted ? 'var(--color-income)' : 'var(--color-error)'
+            backgroundColor: currentWeekExpenseTotal <= weeklyExpenseTargetConverted ? 'var(--color-income)' : 'var(--color-error)'
           }"
           style="height: 100%; transition: width 0.3s ease;"
         ></div>
       </div>
 
       <!-- Stats Footer -->
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
         <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.8rem; color: black;">
-          <span>เฉลี่ยจริงรายสัปดาห์: {{ formatCurrency(actualWeeklyExpenseTotal) }}</span>
+          <span>ใช้จ่ายจริงสัปดาห์นี้: {{ formatCurrency(currentWeekExpenseTotal) }}</span>
           
           <span 
             v-if="countdowns.weekly_expense_target > 0" 
             class="badge-wrap"
             :style="{
-              backgroundColor: actualWeeklyExpenseTotal <= weeklyExpenseTargetConverted ? '#B9F7CA' : '#FFB3C6',
+              backgroundColor: currentWeekExpenseTotal <= weeklyExpenseTargetConverted ? '#B9F7CA' : '#FFB3C6',
               border: '1.5px solid #000',
               borderRadius: '4px',
               padding: '2px 6px',
@@ -113,19 +116,23 @@
               color: 'black'
             }"
           >
-            {{ actualWeeklyExpenseTotal <= weeklyExpenseTargetConverted ? 'คุมงบได้ดีเยี่ยม 👍' : 'ใช้จ่ายเกินงบแล้ว ⚠️' }}
+            {{ currentWeekExpenseTotal <= weeklyExpenseTargetConverted ? 'คุมงบได้ดีเยี่ยม 👍' : 'ใช้จ่ายเกินงบแล้ว ⚠️' }}
           </span>
         </div>
 
-        <div style="font-size: 0.72rem; font-weight: 700; color: var(--color-muted);">
+        <div style="font-weight: 700; font-size: 0.72rem; color: var(--color-muted);">
+          ค่าเฉลี่ยรายสัปดาห์ (ประวัติ): {{ formatCurrency(actualWeeklyExpenseTotal) }}
+        </div>
+
+        <div style="font-size: 0.72rem; font-weight: 700; color: var(--color-muted); margin-top: 4px;">
           <template v-if="countdowns.weekly_expense_target <= 0">
             ⚠️ กรุณาตั้งงบเป้าหมายประจำสัปดาห์เพื่อให้ Mascot คอยเตือนความคุมงบ
           </template>
-          <template v-else-if="actualWeeklyExpenseTotal <= weeklyExpenseTargetConverted">
-            🎉 ยอดเยี่ยม! ใช้จ่ายเฉลี่ยต่ำกว่าเป้าหมาย รักษาเกณฑ์นี้ไว้เพื่อคืนทุนตามแผนน้า
+          <template v-else-if="currentWeekExpenseTotal <= weeklyExpenseTargetConverted">
+            🎉 ยอดเยี่ยม! ใช้จ่ายสัปดาห์นี้ต่ำกว่าเป้าหมาย รักษาเกณฑ์นี้ไว้เพื่อคืนทุนตามแผนน้า
           </template>
           <template v-else>
-            ⚠️ ยอดใช้จ่ายเกินเป้าหมาย! แนะนำให้ปรับลดค่าใช้จ่ายจิปาถะเพื่อรักษาเสถียรภาพการคืนทุน
+            ⚠️ ยอดใช้จ่ายเกินเป้าหมาย! แนะนำให้ปรับลดค่าใช้จ่ายสัปดาห์นี้เพื่อรักษาเสถียรภาพการคืนทุน
           </template>
         </div>
       </div>
@@ -154,6 +161,14 @@ const props = defineProps({
   actualWeeklyExpenseTotal: {
     type: Number,
     default: 0
+  },
+  currentWeekExpenseTotal: {
+    type: Number,
+    default: 0
+  },
+  currentWeekRangeText: {
+    type: String,
+    default: ''
   }
 });
 
@@ -218,11 +233,11 @@ const maxLimit = computed(() => {
 const progressPercent = computed(() => {
   const target = weeklyExpenseTargetConverted.value;
   if (target <= 0) return 0;
-  return (props.actualWeeklyExpenseTotal / target) * 100;
+  return (props.currentWeekExpenseTotal / target) * 100;
 });
 
 const remainingBudget = computed(() => {
-  return weeklyExpenseTargetConverted.value - props.actualWeeklyExpenseTotal;
+  return weeklyExpenseTargetConverted.value - props.currentWeekExpenseTotal;
 });
 
 const isBudgetExceeded = computed(() => {
