@@ -6,6 +6,7 @@ const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 app.use(cors());
@@ -17,8 +18,31 @@ app.use((req, res, next) => {
   next();
 });
 
+let dbInitialized = false;
+let dbInitPromise = null;
+
+// Middleware to ensure DB schema initialization and migrations have completed
+app.use(async (req, res, next) => {
+  if (!dbInitialized && dbInitPromise) {
+    await dbInitPromise;
+  }
+  next();
+});
+
 // Secret key for JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'wat-gen-z-brutal-secret-key-1298';
+
+// Google Client setup
+const googleClientId = process.env.VITE_GOOGLE_CLIENT_ID || '293018933967-ph9tibk9ffaijf0fj8a1fof0jbj9ss9g.apps.googleusercontent.com';
+const googleClient = new OAuth2Client(googleClientId);
+
+async function verifyGoogleToken(token) {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: token,
+    audience: googleClientId,
+  });
+  return ticket.getPayload();
+}
 
 // Database setup
 const pool = new Pool({
@@ -36,7 +60,8 @@ const initDb = async () => {
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
+        password_hash TEXT,
+        google_id TEXT,
         onboarded INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       );
@@ -106,6 +131,11 @@ const initDb = async () => {
         break_minutes INTEGER NOT NULL DEFAULT 0
       );
     `);
+
+    // Schema migrations for Google Login support
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;');
+    await client.query('ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;');
+
     console.log('Database tables successfully initialized.');
   } catch (err) {
     console.error('Database initialization failed:', err);
@@ -114,7 +144,9 @@ const initDb = async () => {
   }
 };
 
-initDb();
+dbInitPromise = initDb().then(() => {
+  dbInitialized = true;
+});
 
 // Middleware to authenticate JWT token
 function authenticateToken(req, res, next) {
@@ -217,6 +249,10 @@ router.post('/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid username or password.' });
     }
 
+    if (!user.password_hash) {
+      return res.status(400).json({ error: 'This account uses Google Login. Please sign in with Google.' });
+    }
+
     const isMatch = bcrypt.compareSync(password, user.password_hash);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid username or password.' });
@@ -227,6 +263,89 @@ router.post('/auth/login', async (req, res) => {
   } catch (err) {
     console.error('Login failed:', err);
     res.status(500).json({ error: 'Server error. Login failed.' });
+  }
+});
+
+// Google OAuth Login
+router.post('/auth/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential missing.' });
+  }
+
+  try {
+    const payload = await verifyGoogleToken(credential);
+    if (!payload) {
+      return res.status(400).json({ error: 'Invalid Google credential.' });
+    }
+
+    const { email, sub: googleId } = payload;
+    if (!email) {
+      return res.status(400).json({ error: 'Email not provided by Google.' });
+    }
+
+    // Check if user already exists
+    let userResult = await pool.query('SELECT * FROM users WHERE google_id = $1 OR username = $2', [googleId, email]);
+    let user = userResult.rows[0];
+
+    let userId;
+    let onboarded = 0;
+
+    if (!user) {
+      // Create new user
+      userId = crypto.randomUUID();
+      const createdAt = new Date().toISOString();
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // 1. Create user (null password_hash, link google_id)
+        await client.query(
+          'INSERT INTO users (id, username, password_hash, onboarded, created_at, google_id) VALUES ($1, $2, NULL, 0, $3, $4)',
+          [userId, email, createdAt, googleId]
+        );
+
+        // 2. Seed default exchange rate
+        await client.query(
+          'INSERT INTO exchange_rate (user_id, rate, last_updated) VALUES ($1, $2, $3)',
+          [userId, 35.00, createdAt]
+        );
+
+        // 3. Seed default savings goal (with 0 target)
+        await client.query(
+          'INSERT INTO savings_goal (user_id, title, target_amount, currency) VALUES ($1, $2, $3, $4)',
+          [userId, 'เงินออมเพื่อการท่องเที่ยว 🗽', 0.0, 'USD']
+        );
+
+        // 4. Seed empty countdowns
+        await client.query(
+          'INSERT INTO countdowns (user_id, next_payday, pay_cycle, next_rent_day, rent_amount, weekly_expense_target, project_start_date, project_end_date) VALUES ($1, $2, $3, $4, $5, 0.0, \'\', \'\')',
+          [userId, '', 'weekly', '', 0.0]
+        );
+
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      userId = user.id;
+      onboarded = user.onboarded;
+
+      // Link google_id if this user previously registered with email but without Google OAuth link
+      if (!user.google_id) {
+        await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, userId]);
+      }
+    }
+
+    const token = jwt.sign({ userId, username: email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ success: true, token, userId, username: email, onboarded });
+  } catch (err) {
+    console.error('Google login failed:', err);
+    res.status(500).json({ error: 'Server error. Google authentication failed.' });
   }
 });
 
