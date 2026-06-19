@@ -361,6 +361,8 @@ router.put('/auth/onboarded', authenticateToken, async (req, res) => {
   }
 });
 
+
+
 // ---------------- PROTECTED API ENDPOINTS ----------------
 
 // Get all dashboard data
