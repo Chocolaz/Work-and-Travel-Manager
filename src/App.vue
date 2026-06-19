@@ -113,6 +113,7 @@
               :actual-weekly-expense-total="actualWeeklyExpenseTotal"
               :current-week-expense-total="currentWeekExpenseTotal"
               :current-week-range-text="currentWeekRangeText"
+              :transactions="transactions"
               @update-countdowns="handleUpdateCountdowns"
             />
           </div>

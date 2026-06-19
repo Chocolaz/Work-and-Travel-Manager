@@ -16,6 +16,26 @@
       </button>
     </div>
 
+    <!-- Tabs Switcher (Visible in Display Mode only) -->
+    <div v-if="!isEditing" style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <button 
+        type="button" 
+        :class="['neo-tab-btn', activeTab === 'current' ? 'active' : '']" 
+        style="padding: 6px 12px; font-size: 0.8rem; font-weight: 800; border-width: 2px; box-shadow: 2px 2px 0px #000;"
+        @click="activeTab = 'current'"
+      >
+        🎯 สัปดาห์นี้
+      </button>
+      <button 
+        type="button" 
+        :class="['neo-tab-btn', activeTab === 'history' ? 'active' : '']" 
+        style="padding: 6px 12px; font-size: 0.8rem; font-weight: 800; border-width: 2px; box-shadow: 2px 2px 0px #000;"
+        @click="activeTab = 'history'"
+      >
+        ⏳ ประวัติรายสัปดาห์
+      </button>
+    </div>
+
     <!-- Edit Settings Mode -->
     <div v-if="isEditing" class="neo-card" style="padding: 16px; margin-bottom: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000;">
       <form @submit.prevent="saveSettings">
@@ -52,8 +72,8 @@
       </form>
     </div>
 
-    <!-- Display Mode -->
-    <div v-else class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #FFF9C4;">
+    <!-- Current Week Display Mode -->
+    <div v-else-if="activeTab === 'current'" class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #FFF9C4;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
         <div>
           <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--color-muted);">
@@ -137,6 +157,83 @@
         </div>
       </div>
     </div>
+
+    <!-- Weekly History Display Mode -->
+    <div v-else class="neo-card" style="padding: 16px; border-width: 2px; box-shadow: 2px 2px 0px #000; background-color: #E8F5E9; max-height: 380px; display: flex; flex-direction: column;">
+      <h3 class="heading-font" style="font-size: 0.85rem; margin-bottom: 12px; color: black; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px;">
+        <span>📊 ประวัติงบประจำสัปดาห์</span>
+        <span style="font-size: 0.65rem; background-color: var(--color-accent); color: black; padding: 2px 6px; border: 1.5px solid #000; border-radius: 4px; font-weight: 800;">
+          ทั้งหมด {{ weeklyHistory.length }} สัปดาห์
+        </span>
+      </h3>
+
+      <div v-if="weeklyHistory.length === 0" style="text-align: center; padding: 24px 8px; color: var(--color-muted); font-weight: 700; font-size: 0.8rem;">
+        📭 ยังไม่มีประวัติการใช้จ่ายรายสัปดาห์
+      </div>
+
+      <div v-else style="overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; flex-grow: 1;">
+        <div 
+          v-for="week in weeklyHistory" 
+          :key="week.key" 
+          class="neo-card" 
+          style="padding: 10px; border-width: 2px; box-shadow: 1.5px 1.5px 0px #000; background-color: #ffffff; display: flex; flex-direction: column; gap: 6px;"
+        >
+          <!-- Date range & Status Badge -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+            <div style="font-weight: 800; font-size: 0.78rem; color: black;">
+              📅 {{ week.rangeText }}
+            </div>
+            
+            <span 
+              v-if="week.target > 0" 
+              :style="{
+                backgroundColor: week.isExceeded ? '#FFB3C6' : '#B9F7CA',
+                border: '1.5px solid #000',
+                borderRadius: '4px',
+                padding: '1px 6px',
+                fontSize: '0.62rem',
+                fontWeight: '900',
+                color: 'black'
+              }"
+            >
+              {{ week.isExceeded ? 'เกินงบ ⚠️' : 'คุมงบได้ 👍' }}
+            </span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div v-if="week.target > 0" class="neo-progress-container" style="background-color: #ffffff; border: 1.5px solid #000; height: 10px; margin: 2px 0;">
+            <div 
+              class="neo-progress-bar" 
+              :style="{ 
+                width: `${Math.min(100, week.percent)}%`,
+                backgroundColor: week.spent <= week.target ? 'var(--color-income)' : 'var(--color-error)'
+              }"
+              style="height: 100%; transition: width 0.3s ease;"
+            ></div>
+          </div>
+
+          <!-- Spending summary details -->
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; font-weight: 800; color: black;">
+            <span>ใช้: {{ formatCurrency(week.spent) }}</span>
+            <span v-if="week.target > 0" style="color: var(--color-muted); font-size: 0.68rem;">
+              งบเป้าหมาย: {{ formatCurrency(week.target) }}
+            </span>
+            <span v-else style="color: var(--color-error); font-size: 0.68rem; font-weight: 800;">
+              ยังไม่ตั้งเป้าหมาย
+            </span>
+          </div>
+
+          <!-- Remaining or Exceeded indicators -->
+          <div v-if="week.target > 0" style="font-size: 0.68rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+            <span :style="{ color: week.isExceeded ? 'var(--color-error)' : '#2E7D32' }">
+              {{ week.isExceeded ? 'ใช้เกินงบไป: ' : 'คงเหลือ: ' }} 
+              <strong>{{ formatCurrency(Math.abs(week.remaining)) }}</strong>
+            </span>
+            <span style="color: var(--color-muted); font-size: 0.62rem;">({{ week.txCount }} รายการ)</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -169,6 +266,10 @@ const props = defineProps({
   currentWeekRangeText: {
     type: String,
     default: ''
+  },
+  transactions: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -176,6 +277,90 @@ const emit = defineEmits(['update-countdowns']);
 
 const isEditing = ref(false);
 const editWeeklyExpenseTarget = ref(0);
+const activeTab = ref('current');
+
+// Convert value to Active Display Currency inside component
+const convertToActiveCurrency = (amount, originalCurrency) => {
+  const amt = parseFloat(amount);
+  if (isNaN(amt)) return 0;
+  if (originalCurrency === props.activeCurrency) return amt;
+  
+  const rate = parseFloat(props.exchangeRate?.rate) || 35.0;
+  
+  if (originalCurrency === 'USD' && props.activeCurrency === 'THB') {
+    return amt * rate;
+  } else if (originalCurrency === 'THB' && props.activeCurrency === 'USD') {
+    return amt / rate;
+  }
+  return amt;
+};
+
+// Compute weekly history from transactions
+const weeklyHistory = computed(() => {
+  if (!props.transactions || props.transactions.length === 0) return [];
+
+  const groups = {};
+
+  props.transactions.forEach(tx => {
+    if (tx.type !== 'expense') return;
+
+    const txDate = new Date(tx.date + 'T00:00:00');
+    if (isNaN(txDate.getTime())) return;
+
+    // Get Monday of this date
+    const day = txDate.getDay();
+    const diff = (day === 0 ? -6 : 1 - day); // Mon = 1, Sun = 0
+    const monday = new Date(txDate);
+    monday.setDate(txDate.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const key = monday.toISOString().split('T')[0];
+
+    if (!groups[key]) {
+      groups[key] = {
+        monday,
+        sunday,
+        spent: 0,
+        txs: []
+      };
+    }
+
+    const amt = parseFloat(tx.amount) || 0;
+    const amountInActiveCurrency = convertToActiveCurrency(amt, tx.currency);
+    groups[key].spent += amountInActiveCurrency;
+    groups[key].txs.push(tx);
+  });
+
+  const historyList = Object.keys(groups).map(key => {
+    const group = groups[key];
+    const fmt = (dt) => dt.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+    const rangeText = `${fmt(group.monday)} – ${fmt(group.sunday)}`;
+
+    const target = weeklyExpenseTargetConverted.value;
+    const isExceeded = group.spent > target;
+    const remaining = target - group.spent;
+    const percent = target > 0 ? (group.spent / target) * 100 : 0;
+
+    return {
+      key,
+      monday: group.monday,
+      sunday: group.sunday,
+      rangeText,
+      spent: group.spent,
+      target,
+      isExceeded,
+      remaining,
+      percent,
+      txCount: group.txs.length
+    };
+  });
+
+  return historyList.sort((a, b) => b.monday - a.monday);
+});
 
 // Sync edits when settings is opened or when props update
 const syncEditTarget = () => {
