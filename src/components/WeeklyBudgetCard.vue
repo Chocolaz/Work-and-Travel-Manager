@@ -167,6 +167,11 @@
         </span>
       </h3>
 
+      <!-- Period guidance alert -->
+      <div v-if="formattedProjectPeriodText" style="font-size: 0.7rem; font-weight: 700; color: #4b5563; background-color: #FFF9C4; border: 2px solid #000; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; box-shadow: 1.5px 1.5px 0px #000; line-height: 1.3;">
+        ℹ️ ประวัตินี้คำนวณ<strong>เฉพาะรายการใช้จ่ายภายในระยะเวลาโครงการ</strong>: <span style="text-decoration: underline;">{{ formattedProjectPeriodText }}</span>
+      </div>
+
       <div v-if="weeklyHistory.length === 0" style="text-align: center; padding: 24px 8px; color: var(--color-muted); font-weight: 700; font-size: 0.8rem;">
         📭 ยังไม่มีประวัติการใช้จ่ายรายสัปดาห์
       </div>
@@ -295,6 +300,17 @@ const convertToActiveCurrency = (amount, originalCurrency) => {
   return amt;
 };
 
+// Format project period text for UI guidance
+const formattedProjectPeriodText = computed(() => {
+  const start = props.countdowns?.project_start_date;
+  const end = props.countdowns?.project_end_date;
+  if (!start || !end) return '';
+  const startDt = new Date(start + 'T00:00:00');
+  const endDt = new Date(end + 'T00:00:00');
+  const fmt = (dt) => dt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+  return `${fmt(startDt)} – ${fmt(endDt)}`;
+});
+
 // Compute weekly history from transactions
 const weeklyHistory = computed(() => {
   if (!props.transactions || props.transactions.length === 0) return [];
@@ -306,6 +322,16 @@ const weeklyHistory = computed(() => {
 
     const txDate = new Date(tx.date + 'T00:00:00');
     if (isNaN(txDate.getTime())) return;
+
+    // Filter by project start and end dates if defined
+    if (props.countdowns?.project_start_date) {
+      const projectStart = new Date(props.countdowns.project_start_date + 'T00:00:00');
+      if (txDate < projectStart) return;
+    }
+    if (props.countdowns?.project_end_date) {
+      const projectEnd = new Date(props.countdowns.project_end_date + 'T23:59:59');
+      if (txDate > projectEnd) return;
+    }
 
     // Get Monday of this date
     const day = txDate.getDay();
