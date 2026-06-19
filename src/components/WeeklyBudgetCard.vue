@@ -537,7 +537,15 @@ const chartBars = computed(() => {
     const color = isExceeded ? '#FFB3C6' : '#B9F7CA';
 
     const startDt = new Date(week.monday);
-    const xLabel = startDt.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+    const endDt = new Date(week.sunday);
+    const startMonthStr = startDt.toLocaleDateString('th-TH', { month: 'short' });
+    let xLabel = '';
+    if (startDt.getMonth() === endDt.getMonth()) {
+      xLabel = `${startDt.getDate()}-${endDt.getDate()} ${startMonthStr}`;
+    } else {
+      const endMonthStr = endDt.toLocaleDateString('th-TH', { month: 'short' });
+      xLabel = `${startDt.getDate()} ${startMonthStr}-${endDt.getDate()} ${endMonthStr}`;
+    }
 
     return {
       ...week,
