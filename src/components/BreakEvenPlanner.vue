@@ -54,13 +54,18 @@
         <div v-if="remainingNetDebt <= 0" class="achievement-banner">
           🏆 คืนทุนโครงการจริงสำเร็จแล้ว! ยินดีด้วยน้าาา! 🎉
         </div>
+        <div v-else-if="weeklyNetIncome <= 0" class="warning-banner">
+          ⚠️ กรุณากรอกข้อมูลและชั่วโมงงานในแท็บ Jobs เพื่อเริ่มคำนวณวันคืนทุน
+        </div>
         <div v-else-if="weeklyNetSurplus <= 0" class="warning-banner">
           ⚠️ ไม่มีวันคืนทุนเนื่องจากรายจ่ายจำลองสูงกว่ารายรับ! กรุณาลดรายจ่ายหรือเพิ่มชั่วโมงงาน
         </div>
-        <div v-else-if="isNetBreakEvenOutOfProject" class="warning-banner" style="background-color: var(--color-expense); border-color: #000; color: black;">
-          🚨 คืนทุนไม่ทันช่วงโครงการ! วันคืนทุนล่าช้ากว่าวันสิ้นสุดโครงการไป <strong>{{ netOverDays }} วัน</strong> (แนะนำให้จำลองลดค่าใช้จ่าย หรือเพิ่มชั่วโมงงาน)
-        </div>
         <div v-else class="metric-result">
+          <!-- Timeline Overflow Alert Banner shown inside details -->
+          <div v-if="isNetBreakEvenOutOfProject" class="warning-banner" style="background-color: var(--color-expense); border-color: #000; color: black; margin-bottom: 12px; font-size: 0.75rem;">
+            🚨 คืนทุนไม่ทันช่วงโครงการ! วันคืนทุนล่าช้ากว่าวันสิ้นสุดโครงการไป <strong>{{ netOverDays }} วัน</strong> (แนะนำให้จำลองลดค่าใช้จ่าย หรือเพิ่มชั่วโมงงาน)
+          </div>
+
           <div class="result-date heading-font">{{ formatDate(netBreakEvenDate) }}</div>
           <div class="result-sub">
             อีก <strong class="highlight-text">{{ netWeeksNeeded.toFixed(1) }} สัปดาห์</strong> · 
@@ -68,11 +73,19 @@
           </div>
           
           <!-- Comparison with Actual -->
-          <div v-if="isSimulatorActive && actualNetBreakEvenDate" class="sim-compare-box" style="margin-top: 8px; font-size: 0.72rem; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; font-weight: 700; color: #444;">
-            <span>วันคืนทุนจริง: {{ formatDateShort(actualNetBreakEvenDate) }}</span>
-            <span style="margin-left: 6px; font-weight: 800;" :style="{ color: simulatedDaysSaved > 0 ? '#0a7c2e' : (simulatedDaysSaved < 0 ? '#b30000' : '#000') }">
-              (ปรับแล้ว{{ simulatedDaysSaved > 0 ? 'เร็วขึ้น' : (simulatedDaysSaved < 0 ? 'ช้าลง' : 'ไม่เปลี่ยนแปลง') }} {{ Math.abs(simulatedDaysSaved) }} วัน)
-            </span>
+          <div v-if="isSimulatorActive" class="sim-compare-box" style="margin-top: 8px; font-size: 0.72rem; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; font-weight: 700; color: #444; display: flex; flex-direction: column; gap: 2px;">
+            <div v-if="actualNetBreakEvenDate">
+              <span>วันคืนทุนจริง: {{ formatDateShort(actualNetBreakEvenDate) }}</span>
+              <span style="margin-left: 6px; font-weight: 800;" :style="{ color: simulatedDaysSaved > 0 ? '#0a7c2e' : (simulatedDaysSaved < 0 ? '#b30000' : '#000') }">
+                (ปรับแล้ว{{ simulatedDaysSaved > 0 ? 'เร็วขึ้น' : (simulatedDaysSaved < 0 ? 'ช้าลง' : 'ไม่เปลี่ยนแปลง') }} {{ Math.abs(simulatedDaysSaved) }} วัน)
+              </span>
+            </div>
+            <div v-else>
+              <span>วันคืนทุนจริง: <strong style="color: #b30000;">ไม่มีวันคืนทุน</strong></span>
+              <span style="margin-left: 6px; font-weight: 800; color: #0b6623;">
+                (การจำลองนี้ช่วยให้คืนทุนได้สำเร็จ! 🎉)
+              </span>
+            </div>
           </div>
 
           <div class="debt-status" style="margin-top: 6px;">
@@ -249,12 +262,22 @@
                   <span>• ต้องออมเงินสุทธิเฉลี่ย:</span>
                   <span class="wh-green">{{ formatCurrency(requiredWeeklySavings) }} / สัปดาห์</span>
                 </div>
-                <div style="margin-top: 4px; font-weight: 800; display: flex; justify-content: space-between;">
+                <div style="margin-top: 4px; font-weight: 800; display: flex; justify-content: space-between; align-items: center;">
                   <span>• คุมค่าใช้จ่ายต่อสัปดาห์ห้ามเกิน:</span>
-                  <span class="wh-red">{{ formatCurrency(recommendedMaxWeeklyExpense) }} / สัปดาห์</span>
+                  <span v-if="recommendedMaxWeeklyExpense > 0" class="wh-red">
+                    {{ formatCurrency(recommendedMaxWeeklyExpense) }} / สัปดาห์
+                  </span>
+                  <span v-else class="wh-red" style="font-size: 0.75rem;">
+                    ต้องหารายได้เพิ่ม / {{ formatCurrency(0) }}
+                  </span>
                 </div>
                 <div style="margin-top: 2px; font-size: 0.7rem; color: var(--color-muted); text-align: right;">
-                  (เท่ากับงบกินอยู่ไม่รวมค่าเช่าบ้านสูงสุด: {{ formatCurrency(recommendedMaxWeeklyExpense - rentAmountActive) }})
+                  <span v-if="recommendedMaxWeeklyExpense > rentAmountActive">
+                    (เท่ากับงบกินอยู่ไม่รวมค่าเช่าบ้านสูงสุด: {{ formatCurrency(recommendedMaxWeeklyExpense - rentAmountActive) }})
+                  </span>
+                  <span v-else style="color: #b30000; font-weight: 800;">
+                    (งบกินอยู่ติดลบ: ต้องขยับชั่วโมงทำงานเพิ่ม ⚠️)
+                  </span>
                 </div>
                 <p v-if="recommendedMaxWeeklyExpense < rentAmountActive" style="margin-top: 8px; color: #b30000; font-weight: 900; margin-bottom: 0; border-top: 1.5px dashed #000; padding-top: 6px;">
                   ⚠️ คำเตือน: ค่าเช่าบ้านของคุณสูงกว่างบรายสัปดาห์ที่แนะนำข้างต้น คุณจะไม่สามารถคืนทุนได้ทันกรอบโครงการด้วยชั่วโมงทำงานปัจจุบัน (จำเป็นต้องเพิ่มชั่วโมงงาน/หาจ็อบเสริม)
@@ -330,7 +353,7 @@ const rentAmountActive = computed(() => {
   const baseAmount = convertUsdToActive(props.countdowns?.rent_amount || 0);
   const cycle = props.countdowns?.rent_cycle || 'weekly';
   if (cycle === 'bi-weekly') return baseAmount / 2;
-  if (cycle === 'monthly') return baseAmount / 4;
+  if (cycle === 'monthly') return baseAmount / 4.33;
   return baseAmount;
 });
 
