@@ -517,7 +517,7 @@ tr:nth-child(even) {
   text-transform: uppercase;
 }
 
-.badge-tag.expense { background-color: var(--color-expense); color: #FFF; }
+.badge-tag.expense { background-color: var(--color-expense); color: #000; }
 .badge-tag.income { background-color: var(--color-income); }
 .badge-tag.project { background-color: var(--color-accent); }
 

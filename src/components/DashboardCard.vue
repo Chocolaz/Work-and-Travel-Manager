@@ -21,16 +21,16 @@
     </div>
 
     <!-- Expenses Card -->
-    <div class="neo-card expense-card">
+    <div class="neo-card expense-card" style="color: black;">
       <div class="neo-card-title">
         <span class="sticker" style="font-size: 1.1rem; width: 28px; height: 28px; background-color: white; color: black;">📉</span>
         <span>รายจ่ายรวม</span>
       </div>
-      <div class="stat-num" style="color: white;">{{ formatCurrency(totalExpenses) }}</div>
-            <div class="stat-sub" style="color: white; margin-top: 4px;">รวมค่าโครงการและค่าใช้จ่ายอื่นๆ</div>
+      <div class="stat-num" style="color: black;">{{ formatCurrency(totalExpenses) }}</div>
+      <div class="stat-sub" style="color: black; margin-top: 4px;">รวมค่าโครงการและค่าใช้จ่ายอื่นๆ</div>
 
       <!-- Expenses Breakdown -->
-      <div style="font-size: 0.72rem; font-weight: 700; color: #FFE4E6; margin-top: 6px; border-top: 1.5px dashed rgba(255,255,255,0.4); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 0.72rem; font-weight: 700; color: black; margin-top: 6px; border-top: 1.5px dashed rgba(0,0,0,0.25); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
         <div style="display: flex; justify-content: space-between;">
           <span>ค่าโครงการสะสม:</span>
           <span>{{ formatCurrency(projectCostsTotal) }}</span>
@@ -53,13 +53,12 @@
           <span class="sticker" style="font-size: 1.1rem; width: 28px; height: 28px; background-color: white; color: black;">
             {{ isNetBreakEven ? '🏆' : '⏳' }}
           </span>
-          <span :style="{ color: isNetBreakEven ? 'black' : 'white' }" style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: black;">
             <span>การคืนทุนจริง (Net ROI)</span>
             <span 
               class="roi-info-btn"
               @click.stop="toggleTooltip"
-              style="cursor: pointer; font-size: 0.85rem; opacity: 0.85; position: relative; z-index: 10;"
-              :style="{ color: isNetBreakEven ? 'black' : '#FFF' }"
+              style="cursor: pointer; font-size: 0.85rem; opacity: 0.85; position: relative; z-index: 10; color: black;"
             >
               ℹ️
               <!-- Popover Tooltip -->
@@ -72,7 +71,7 @@
             </span>
           </span>
         </div>
-        <div class="stat-num" :style="{ color: isNetBreakEven ? 'black' : 'white' }">{{ netRoi.toFixed(1) }}%</div>
+        <div class="stat-num">{{ netRoi.toFixed(1) }}%</div>
         
         <!-- Break-even Progress Bar -->
         <div class="neo-progress-container" style="background-color: white; border-width: 2px; margin: 8px 0; height: 16px;">
@@ -86,14 +85,13 @@
           ></div>
         </div>
 
-        <div class="stat-sub" :style="{ color: isNetBreakEven ? 'black' : 'white' }" style="margin-bottom: 8px;">
+        <div class="stat-sub" style="color: black; margin-bottom: 8px;">
           {{ isNetBreakEven ? '🎉 คืนทุนรายจ่ายและค่าโครงการครบแล้ว!' : `ยังขาดอีก ${formatCurrency(amountToNetBreakEven)} จะคืนทุนสุทธิ` }}
         </div>
 
         <!-- Secondary Gross ROI Section -->
         <div 
-          style="font-size: 0.72rem; font-weight: 700; margin-top: 6px; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;"
-          :style="{ color: isNetBreakEven ? 'black' : '#FFE4E6', borderTopColor: isNetBreakEven ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.3)' }"
+          style="font-size: 0.72rem; font-weight: 700; margin-top: 6px; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; display: flex; justify-content: space-between; align-items: center; color: black;"
         >
           <span>ถอนทุนเฉพาะค่าโครงการ (Gross):</span>
           <span>{{ grossRoi.toFixed(1) }}%</span>
