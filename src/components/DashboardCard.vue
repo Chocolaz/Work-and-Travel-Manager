@@ -38,46 +38,55 @@
     </div>
 
       <!-- ROI / Break-even Card -->
-      <div :class="['neo-card', isBreakEven ? 'income-card' : 'expense-card']" style="color: black; overflow: visible !important;">
+      <div :class="['neo-card', isNetBreakEven ? 'income-card' : 'expense-card']" style="color: black; overflow: visible !important;">
         <div class="neo-card-title">
           <span class="sticker" style="font-size: 1.1rem; width: 28px; height: 28px; background-color: white; color: black;">
-            {{ isBreakEven ? '🏆' : '⏳' }}
+            {{ isNetBreakEven ? '🏆' : '⏳' }}
           </span>
-          <span :style="{ color: isBreakEven ? 'black' : 'white' }" style="display: inline-flex; align-items: center; gap: 6px;">
-            <span>คืนทุนโครงการ (ROI)</span>
+          <span :style="{ color: isNetBreakEven ? 'black' : 'white' }" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span>การคืนทุนจริง (Net ROI)</span>
             <span 
               class="roi-info-btn"
               @click.stop="toggleTooltip"
               style="cursor: pointer; font-size: 0.85rem; opacity: 0.85; position: relative; z-index: 10;"
-              :style="{ color: isBreakEven ? 'black' : '#FFF' }"
+              :style="{ color: isNetBreakEven ? 'black' : '#FFF' }"
             >
               ℹ️
               <!-- Popover Tooltip -->
               <span v-if="showTooltip" class="roi-tooltip-content">
-                <strong>อัตราผลตอบแทนจากการลงทุน (ROI)</strong><br/>
-                คำนวณจาก: (รายได้สุทธิสะสม / ค่าใช้จ่ายโครงการสะสม) × 100%<br/><br/>
-                • 100% หมายถึงทำเงินคืนเท่าทุนค่าโครงการแล้ว<br/>
-                • หลังจากนี้ เงินที่หาได้คือกำไรล้วนๆ!
+                <strong>วิเคราะห์การคืนทุนโครงการ (ROI)</strong><br/>
+                แบ่งเป็น 2 รูปแบบเพื่อความแม่นยำ:<br/><br/>
+                1. <strong>คืนทุนสุทธิ (Net ROI)</strong>: คิดจาก รายรับ / รายจ่ายทั้งหมด (ค่าโครงการ + ค่ากินอยู่). ถ้าเกิน 100% แปลว่ากระแสเงินสดเป็นบวกจริง 💚<br/>
+                2. <strong>ถอนทุนโครงการ (Gross ROI)</strong>: คิดจาก รายรับ / ค่าโครงการเท่านั้น (ไม่รวมค่ากินอยู่) เพื่อวัดการทำเงินคืนเทียบทุนสมัคร ⚡
               </span>
             </span>
           </span>
         </div>
-        <div class="stat-num" :style="{ color: isBreakEven ? 'black' : 'white' }">{{ roi.toFixed(1) }}%</div>
+        <div class="stat-num" :style="{ color: isNetBreakEven ? 'black' : 'white' }">{{ netRoi.toFixed(1) }}%</div>
         
         <!-- Break-even Progress Bar -->
         <div class="neo-progress-container" style="background-color: white; border-width: 2px; margin: 8px 0; height: 16px;">
           <div 
             class="neo-progress-bar" 
             :style="{ 
-              width: `${roiPercentage}%`, 
-              backgroundColor: isBreakEven ? 'var(--color-balance)' : 'var(--color-accent)',
-              borderRightWidth: roiPercentage > 0 ? '2px' : '0' 
+              width: `${netRoiPercentage}%`, 
+              backgroundColor: isNetBreakEven ? 'var(--color-balance)' : 'var(--color-accent)',
+              borderRightWidth: netRoiPercentage > 0 ? '2px' : '0' 
             }"
           ></div>
         </div>
 
-        <div class="stat-sub" :style="{ color: isBreakEven ? 'black' : 'white' }">
-          {{ isBreakEven ? '🎉 คืนทุนโครงการเรียบร้อยแล้ว!' : `ยังขาดอีก ${formatCurrency(amountToBreakEven)} จะคืนทุน` }}
+        <div class="stat-sub" :style="{ color: isNetBreakEven ? 'black' : 'white' }" style="margin-bottom: 8px;">
+          {{ isNetBreakEven ? '🎉 คืนทุนรายจ่ายและค่าโครงการครบแล้ว!' : `ยังขาดอีก ${formatCurrency(amountToNetBreakEven)} จะคืนทุนสุทธิ` }}
+        </div>
+
+        <!-- Secondary Gross ROI Section -->
+        <div 
+          style="font-size: 0.72rem; font-weight: 700; margin-top: 6px; border-top: 1.5px dashed rgba(0,0,0,0.18); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;"
+          :style="{ color: isNetBreakEven ? 'black' : '#FFE4E6', borderTopColor: isNetBreakEven ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.3)' }"
+        >
+          <span>ถอนทุนเฉพาะค่าโครงการ (Gross):</span>
+          <span>{{ grossRoi.toFixed(1) }}%</span>
         </div>
       </div>
     </div>
@@ -117,15 +126,24 @@
     }
   });
   
-  const isBreakEven = computed(() => props.roi >= 100);
+  const grossRoi = computed(() => {
+    return props.roi;
+  });
 
-  const roiPercentage = computed(() => {
-    const parsedRoi = parseFloat(props.roi);
-    return isNaN(parsedRoi) ? 0 : Math.min(100, Math.max(0, parsedRoi));
+  const netRoi = computed(() => {
+    if (props.totalExpenses <= 0) return 0;
+    const pct = (props.totalIncome / props.totalExpenses) * 100;
+    return isNaN(pct) ? 0 : pct;
+  });
+
+  const isNetBreakEven = computed(() => netRoi.value >= 100);
+
+  const netRoiPercentage = computed(() => {
+    return Math.min(100, Math.max(0, netRoi.value));
   });
   
-  const amountToBreakEven = computed(() => {
-    const difference = props.projectCostsTotal - props.totalIncome;
+  const amountToNetBreakEven = computed(() => {
+    const difference = props.totalExpenses - props.totalIncome;
     return difference > 0 ? difference : 0;
   });
   
