@@ -27,7 +27,18 @@
         </div>
         
         <div class="user-controls">
-          <span class="username-tag">👤 ผู้ใช้: {{ username }}</span>
+          <div class="user-profile-group">
+            <div class="user-avatar-circle" :title="username">
+              {{ username ? username.charAt(0).toUpperCase() : 'U' }}
+            </div>
+            <div class="user-info-text">
+              <span class="username-tag">{{ username }}</span>
+              <div class="sync-badge">
+                <span class="sync-dot"></span>
+                <span class="sync-text">Cloud Synced</span>
+              </div>
+            </div>
+          </div>
           <button @click="logout" class="neo-btn danger-btn" style="padding: 6px 12px; font-size: 0.75rem; box-shadow: 2px 2px 0px #000; border-width: 2px;">
             ออกจากระบบ 🚪
           </button>
@@ -177,3 +188,95 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.user-profile-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--color-balance);
+  color: #ffffff;
+  border: var(--border-medium);
+  box-shadow: 2px 2px 0px #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 0px #000;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.username-tag {
+  background-color: #FFFFFF;
+  padding: 2px 8px;
+  border: var(--border-medium);
+  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  box-shadow: 1px 1px 0px #000;
+}
+
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #ffffff;
+  border: 1.5px solid #000000;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  box-shadow: 1px 1px 0px #000;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulseSync 2s infinite ease-in-out;
+}
+
+@keyframes pulseSync {
+  0% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Adjust header to wrap nicely on mobile */
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .user-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>

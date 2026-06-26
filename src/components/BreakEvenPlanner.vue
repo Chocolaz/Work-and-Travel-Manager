@@ -142,14 +142,37 @@
             <span class="sim-value heading-font">{{ formatCurrency(simulatedWeeklyExpense) }}</span>
           </div>
           
-          <input 
-            type="range" 
-            v-model.number="simulatedWeeklyExpense" 
-            :min="minBudgetSlider" 
-            :max="maxBudgetSlider" 
-            step="5"
-            class="neo-slider" 
-          />
+          <div class="slider-control-group">
+            <button 
+              type="button" 
+              class="step-btn" 
+              @click="simulatedWeeklyExpense = Math.max(minBudgetSlider, simulatedWeeklyExpense - 5)"
+            >
+              ➖
+            </button>
+            <input 
+              type="range" 
+              v-model.number="simulatedWeeklyExpense" 
+              :min="minBudgetSlider" 
+              :max="maxBudgetSlider" 
+              step="5"
+              class="neo-slider" 
+            />
+            <button 
+              type="button" 
+              class="step-btn" 
+              @click="simulatedWeeklyExpense = Math.min(maxBudgetSlider, simulatedWeeklyExpense + 5)"
+            >
+              ➕
+            </button>
+            <input 
+              type="number" 
+              v-model.number="simulatedWeeklyExpense" 
+              :min="minBudgetSlider" 
+              :max="maxBudgetSlider" 
+              class="slider-manual-input"
+            />
+          </div>
           
           <div class="sim-helper-row">
             <span @click="resetBudgetToActual" class="sim-helper-btn" title="คลิกเพื่อใช้ค่าเฉลี่ยจริง">
@@ -172,6 +195,13 @@
             </div>
             
             <div class="job-sim-control">
+              <button 
+                type="button" 
+                class="step-btn" 
+                @click="job.simHours = Math.max(0, job.simHours - 1)"
+              >
+                ➖
+              </button>
               <input 
                 type="range" 
                 v-model.number="job.simHours" 
@@ -180,7 +210,21 @@
                 step="1"
                 class="neo-slider job-slider" 
               />
-              <span class="job-hours-displayheading heading-font">{{ job.simHours }} hr</span>
+              <button 
+                type="button" 
+                class="step-btn" 
+                @click="job.simHours = Math.min(80, job.simHours + 1)"
+              >
+                ➕
+              </button>
+              <input 
+                type="number" 
+                v-model.number="job.simHours" 
+                min="0" 
+                max="80" 
+                class="slider-manual-input job-hours-input"
+              />
+              <span class="job-hours-unit-tag">hr</span>
             </div>
           </div>
           <div class="sim-helper-row" style="justify-content: flex-end;">
@@ -468,7 +512,8 @@ const weeklyNetIncome = computed(() => {
 
 // surplus cash flow (subtracting both simulated variable expense and fixed rent)
 const weeklyNetSurplus = computed(() => {
-  return weeklyNetIncome.value - simulatedWeeklyExpense.value - rentAmountActive.value;
+  const expense = parseFloat(simulatedWeeklyExpense.value) || 0;
+  return weeklyNetIncome.value - expense - rentAmountActive.value;
 });
 
 // Weeks needed to break-even
@@ -603,7 +648,8 @@ const getDiffDays = (alternativeBudget) => {
     return { days: 0, status: 'no-debt' };
   }
   
-  const currentSurplus = weeklyNetIncome.value - simulatedWeeklyExpense.value - rentAmountActive.value;
+  const expense = parseFloat(simulatedWeeklyExpense.value) || 0;
+  const currentSurplus = weeklyNetIncome.value - expense - rentAmountActive.value;
   const altSurplus = weeklyNetIncome.value - alternativeBudget - rentAmountActive.value;
   
   if (currentSurplus <= 0) {
@@ -979,10 +1025,77 @@ const netOverDays = computed(() => {
   color: var(--color-muted);
 }
 
+.slider-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.step-btn {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #000000;
+  background-color: var(--color-accent);
+  color: #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.05s, box-shadow 0.05s;
+  border-radius: 4px;
+  padding: 0;
+  user-select: none;
+}
+
+.step-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.step-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.slider-manual-input {
+  width: 80px;
+  height: 32px;
+  border: 2px solid #000000;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 4px;
+  box-shadow: 2px 2px 0px #000000;
+  background-color: #ffffff;
+}
+
+.slider-manual-input:focus {
+  outline: none;
+  border-color: var(--color-balance);
+}
+
 .job-sim-control {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.job-hours-unit-tag {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  background-color: #000000;
+  color: #ffffff;
+  padding: 4px 6px;
+  border: 1.5px solid #000000;
+  box-shadow: 1px 1px 0px #000000;
+  white-space: nowrap;
 }
 
 .job-slider {
