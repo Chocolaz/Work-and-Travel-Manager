@@ -85,6 +85,8 @@
           :roi="roi"
           :project-costs-total="projectCostsTotal"
           :active-currency="activeCurrency"
+          :rent-and-deposit-total="rentAndDepositTotal"
+          :other-expenses-total="otherExpensesTotal"
         />
 
         <div class="main-grid">
@@ -626,6 +628,28 @@ const totalIncome = computed(() => {
 const dailyExpenses = computed(() => {
   return transactions.value.reduce((sum, tx) => {
     if (tx.type === 'expense') {
+      const amt = parseFloat(tx.amount);
+      const validAmt = isNaN(amt) ? 0 : amt;
+      return sum + convertToActiveCurrency(validAmt, tx.currency);
+    }
+    return sum;
+  }, 0);
+});
+
+const rentAndDepositTotal = computed(() => {
+  return transactions.value.reduce((sum, tx) => {
+    if (tx.type === 'expense' && (tx.category === 'rent' || tx.category === 'deposit')) {
+      const amt = parseFloat(tx.amount);
+      const validAmt = isNaN(amt) ? 0 : amt;
+      return sum + convertToActiveCurrency(validAmt, tx.currency);
+    }
+    return sum;
+  }, 0);
+});
+
+const otherExpensesTotal = computed(() => {
+  return transactions.value.reduce((sum, tx) => {
+    if (tx.type === 'expense' && tx.category !== 'rent' && tx.category !== 'deposit') {
       const amt = parseFloat(tx.amount);
       const validAmt = isNaN(amt) ? 0 : amt;
       return sum + convertToActiveCurrency(validAmt, tx.currency);

@@ -29,10 +29,20 @@
       <div class="stat-num" style="color: white;">{{ formatCurrency(totalExpenses) }}</div>
             <div class="stat-sub" style="color: white; margin-top: 4px;">รวมค่าโครงการและค่าใช้จ่ายอื่นๆ</div>
 
-      <!-- Expenses excluding project costs -->
-      <div style="font-size: 0.75rem; font-weight: 700; color: #FFE4E6; margin-top: 4px; border-top: 1.5px dashed rgba(255,255,255,0.4); padding-top: 6px; display: flex; justify-content: space-between;">
-        <span>ไม่รวมค่าโครงการ:</span>
-        <span>{{ formatCurrency(dailyExpenses) }}</span>
+      <!-- Expenses Breakdown -->
+      <div style="font-size: 0.72rem; font-weight: 700; color: #FFE4E6; margin-top: 6px; border-top: 1.5px dashed rgba(255,255,255,0.4); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>ค่าโครงการสะสม:</span>
+          <span>{{ formatCurrency(projectCostsTotal) }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>ค่าบ้าน & มัดจำสะสม:</span>
+          <span>{{ formatCurrency(rentAndDepositTotal) }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>ค่ากินอยู่ & อื่นๆ สะสม:</span>
+          <span>{{ formatCurrency(otherExpensesTotal) }}</span>
+        </div>
       </div>
       
     </div>
@@ -122,6 +132,14 @@
     },
     activeCurrency: {
       type: String,
+      required: true
+    },
+    rentAndDepositTotal: {
+      type: Number,
+      required: true
+    },
+    otherExpensesTotal: {
+      type: Number,
       required: true
     }
   });
