@@ -316,6 +316,66 @@
           </div>
         </div>
       </div>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <div class="mobile-bottom-nav">
+        <button 
+          @click="currentView = 'dashboard'" 
+          :class="['bottom-nav-btn', currentView === 'dashboard' ? 'active' : '']"
+        >
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">แดชบอร์ด</span>
+        </button>
+        <button 
+          @click="currentView = 'planner'" 
+          :class="['bottom-nav-btn', currentView === 'planner' ? 'active' : '']"
+        >
+          <span class="nav-icon">🎯</span>
+          <span class="nav-text">วางแผน</span>
+        </button>
+        
+        <!-- Central FAB Button -->
+        <button 
+          class="bottom-nav-fab"
+          @click="showAddTxModal = true"
+        >
+          <span class="fab-icon">+</span>
+        </button>
+        
+        <button 
+          @click="currentView = 'transactions'" 
+          :class="['bottom-nav-btn', currentView === 'transactions' ? 'active' : '']"
+        >
+          <span class="nav-icon">📝</span>
+          <span class="nav-text">ประวัติ</span>
+        </button>
+        <button 
+          @click="currentView = 'jobs'" 
+          :class="['bottom-nav-btn', currentView === 'jobs' ? 'active' : '']"
+        >
+          <span class="nav-icon">🏢</span>
+          <span class="nav-text">ชั่วโมงงาน</span>
+        </button>
+      </div>
+
+      <!-- Mobile Quick Add Modal -->
+      <div v-if="showAddTxModal" class="neo-modal-overlay" style="z-index: 9999;" @click.self="showAddTxModal = false">
+        <div class="neo-modal-content" style="max-width: 450px; padding: 24px; border-width: 4px; transform: rotate(0.5deg); overflow-y: auto; max-height: 90vh;">
+          <button class="neo-modal-close" @click="showAddTxModal = false">✖</button>
+          
+          <h2 class="heading-font" style="font-size: 1.3rem; color: black; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            💸 บันทึกรายการด่วน (Quick Add)
+          </h2>
+          
+          <CostForm 
+            :project-costs="projectCosts"
+            :exchange-rate="exchangeRate"
+            @add-transaction="handleQuickAddTransaction"
+            @update-project-costs="handleUpdateProjectCosts"
+          />
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -347,6 +407,14 @@ const activeCurrency = ref(localStorage.getItem('wat_active_currency') || 'USD')
 
 // Navigation View State
 const currentView = ref('dashboard');
+
+// Quick Add Modal State
+const showAddTxModal = ref(false);
+
+const handleQuickAddTransaction = async (newTx) => {
+  await handleAddTransaction(newTx);
+  showAddTxModal.value = false;
+};
 
 // Database state from Server
 // Caching Helpers

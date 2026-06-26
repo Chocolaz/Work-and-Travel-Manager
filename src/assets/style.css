@@ -911,4 +911,106 @@ tr:nth-child(even) {
   }
 }
 
+/* Mobile Bottom Navigation Bar Styles */
+.mobile-bottom-nav {
+  display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 600px) {
+  /* Hide the top horizontal scrollable tabs on mobile */
+  .neo-tabs {
+    display: none !important;
+  }
+  
+  /* Add padding bottom to App container so content is not cut off by bottom nav */
+  .app-container {
+    padding-bottom: 90px !important;
+  }
+  
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background-color: #FFFFFF;
+    border-top: 3.5px solid #000000;
+    box-shadow: 0px -4px 0px rgba(0, 0, 0, 0.15);
+    z-index: 999;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 10px;
+  }
+  
+  .bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    height: 100%;
+    flex: 1;
+    cursor: pointer;
+    color: var(--color-muted);
+    transition: color 0.1s, transform 0.1s;
+    outline: none;
+    padding: 4px 0;
+  }
+  
+  .bottom-nav-btn.active {
+    color: #000000;
+    font-weight: 800;
+  }
+  
+  .bottom-nav-btn.active .nav-icon {
+    transform: scale(1.15);
+  }
+  
+  .nav-icon {
+    font-size: 1.35rem;
+    line-height: 1.2;
+    transition: transform 0.1s;
+  }
+  
+  .nav-text {
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  
+  /* Floating Action Button (FAB) */
+  .bottom-nav-fab {
+    width: 52px;
+    height: 52px;
+    background-color: var(--color-accent);
+    border: 3.5px solid #000000;
+    border-radius: 50%;
+    box-shadow: 2px 2px 0px #000000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    top: -15px; /* Floats above the bar */
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  
+  .bottom-nav-fab:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #000000;
+  }
+  
+  .fab-icon {
+    font-size: 2.2rem;
+    font-weight: 500;
+    color: #000000;
+    line-height: 1;
+    position: relative;
+    top: -2px;
+  }
+}
+
+
 
