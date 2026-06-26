@@ -26,28 +26,44 @@
         <div class="form-row">
           <!-- Type Selection -->
           <div class="form-group">
-            <label for="tx-type">ประเภท</label>
+            <label for="tx-type">ประเภท (Type)</label>
             <select id="tx-type" v-model="txType" @change="handleTypeChange">
               <option value="expense">รายจ่าย 📉</option>
               <option value="income">รายรับ 📈</option>
             </select>
           </div>
 
-          <!-- Category Selection -->
+          <!-- Date Input -->
           <div class="form-group">
-            <label for="tx-category">หมวดหมู่</label>
-            <select id="tx-category" v-model="txCategory" required>
-              <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-                {{ cat.label }}
-              </option>
-            </select>
+            <label for="tx-date">วันที่ (Date)</label>
+            <input type="date" id="tx-date" v-model="txDate" required />
+          </div>
+        </div>
+
+        <!-- Category Selection (Visual Chips Grid) -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 0.75rem; font-weight: bold; margin-bottom: 6px; display: block;">หมวดหมู่ (Category)</label>
+          <div class="category-grid">
+            <button
+              v-for="cat in categories"
+              :key="cat.value"
+              type="button"
+              :class="[
+                'category-chip',
+                txCategory === cat.value ? 'active' : '',
+                txCategory === cat.value ? (txType === 'income' ? 'income-active' : 'expense-active') : ''
+              ]"
+              @click="txCategory = cat.value"
+            >
+              {{ cat.label }}
+            </button>
           </div>
         </div>
 
         <div class="form-row">
           <!-- Amount Input -->
           <div class="form-group">
-            <label for="tx-amount">จำนวนเงิน</label>
+            <label for="tx-amount">จำนวนเงิน (Amount)</label>
             <input 
               type="number" 
               id="tx-amount" 
@@ -61,7 +77,7 @@
 
           <!-- Currency Selection -->
           <div class="form-group">
-            <label for="tx-currency">สกุลเงิน</label>
+            <label for="tx-currency">สกุลเงิน (Currency)</label>
             <select id="tx-currency" v-model="txCurrency">
               <option value="USD">USD ($)</option>
               <option value="THB">THB (฿)</option>
@@ -69,15 +85,9 @@
           </div>
         </div>
 
-        <!-- Date Input -->
-        <div class="form-group">
-          <label for="tx-date">วันที่</label>
-          <input type="date" id="tx-date" v-model="txDate" required />
-        </div>
-
         <!-- Note Input -->
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="tx-note">บันทึกเพิ่มเติม</label>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="tx-note">บันทึกเพิ่มเติม (Note)</label>
           <input type="text" id="tx-note" v-model="txNote" placeholder="รายละเอียดรายการ..." />
         </div>
 
@@ -305,5 +315,51 @@ input:focus, select:focus, textarea:focus {
 .neo-btn {
   padding: 6px 12px;
   font-size: 0.75rem;
+}
+
+/* Category grid and chips styles */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.category-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background-color: #FAF9F6;
+  border: var(--border-medium);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow: 2px 2px 0px var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+.category-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--color-border);
+}
+.category-chip:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--color-border);
+}
+.category-chip.active {
+  transform: none;
+}
+.category-chip.active.expense-active {
+  background-color: var(--color-expense);
+  color: #000000;
+  box-shadow: 2px 2px 0px var(--color-border);
+}
+.category-chip.active.income-active {
+  background-color: var(--color-income);
+  color: #000000;
+  box-shadow: 2px 2px 0px var(--color-border);
 }
 </style>
